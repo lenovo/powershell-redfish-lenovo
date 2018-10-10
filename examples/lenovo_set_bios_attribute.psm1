@@ -1,6 +1,6 @@
 ###
 #
-# Lenovo Redfish examples - Restart Manager
+# Lenovo Redfish examples - Set BIOS Attribute
 #
 # Copyright Notice:
 #
@@ -26,20 +26,23 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_restart_manager
+function lenovo_set_bios_attribute
 {
    <#
    .Synopsis
-    Cmdlet used to restart manager
+    Cmdlet used to set BIOS attribute
    .DESCRIPTION
-    Cmdlet used to restart manager using Redfish API
+    Cmdlet used to set BIOS attribute using Redfish API
     Connection information can be specified via command parameter or configuration file
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
+    - system_id: Pass in System resource instance id(none: first instance, all: all instances)
+    - attribute_name: Pass in BIOS attribute name
+    - attribute_value: Pass in BIOS attribute value
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_restart_manager -ip 10.10.10.10 -username USERID -password PASSW0RD
+    lenovo_set_bios_attribute -ip 10.10.10.10 -username USERID -password PASSW0RD -attribute_name XXX -attribute_value XXX
    #>
    
     param(
@@ -50,10 +53,15 @@ function lenovo_restart_manager
         [Parameter(Mandatory=$False)]
         [string]$password="",
         [Parameter(Mandatory=$False)]
+        [string]$system_id="None",
+        [Parameter(Mandatory=$True)]
+        [string]$attribute_name="",
+        [Parameter(Mandatory=$True)]
+        [string]$attribute_value="",
+        [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
         )
         
-
     # get configuration info from config file
     $ht_config_ini_info = read_config -config_file $config_file
     
@@ -70,14 +78,14 @@ function lenovo_restart_manager
     {
         $password = [string]($ht_config_ini_info['BmcUserpassword'])
     }
-    if ($manager_restart_value -eq "")
+    if ($attribute_name -eq "" -or $attribute_value -eq "")
     {
-        Write-Host "Please input manager_restart_value."
+        Write-Host "Please input Bios attribute and value."
         return
     }
-    if ($manager_id -eq "")
+    if ($system_id -eq "")
     {
-        $manager_id = [string]($ht_config_ini_info['ManagerId'])
+        $system_id = [string]($ht_config_ini_info['SystemId'])
     }
     
     try
@@ -94,67 +102,65 @@ function lenovo_restart_manager
         }
 
         # check connection
-        $base_url = "https://$ip/redfish/v1/Managers/"
+        $base_url = "https://$ip/redfish/v1/Systems/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
         
-        # get the manager url collection
-        $manager_url_collection = @()
-        # convert response content to hash table
-        $converted_object = $response.Content | ConvertFrom-Json
-        $hash_table = @{}
-        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+        # get the system url collection
+        $system_url_collection = @()
+        $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
 
-        # set the $manager_url_collection by checking $manager_id value
-        foreach ($i in $hash_table.Members)
-        {
-            $i = [string]$i
-            $manager_url_string = ($i.Split("=")[1].Replace("}",""))   
-            $manager_url_id = $manager_url_string.Split("/")[4]
-            $manager_url_collection += $manager_url_string
-        }
-
-        # loop all manager resource instance in $manager_url_collection
-        foreach ($manager_url_string in $manager_url_collection)
+        
+        # loop all System resource instance in $system_url_collection
+        foreach ($system_url_string in $system_url_collection)
         {
             
-            # get Manager restart url from the Manager resource instance
-            $uri_address_manager = "https://$ip"+$manager_url_string
-            if (-not $uri_address_manager.EndsWith("/"))
+            # get Bios from the System resource instance
+            $uri_address_system = "https://$ip"+$system_url_string
+            if (-not $uri_address_system.EndsWith("/"))
             {
-                $uri_address_manager = $uri_address_manager + "/"
+                $uri_address_system = $uri_address_system + "/"
             }
             
-            $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
+            $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             
             $converted_object = $response.Content | ConvertFrom-Json
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+            $temp = [string]$hash_table.Bios
+            $uri_address_Bios = "https://$ip"+($temp.Split("=")[1].Replace("}",""))
+            if (-not $uri_address_Bios.EndsWith("/"))
+            {
+                $uri_address_Bios = $uri_address_Bios + "/"
+            }
+
+            # get Bios attributes collections from Bios
+            $response = Invoke-WebRequest -Uri $uri_address_Bios -Headers $JsonHeader -Method Get -UseBasicParsing
+
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                   
+            $temp = $hash_table.'@Redfish.Settings'."SettingsObject".'@odata.id'
+            $uri_address_BiosPending = "https://$ip"+$temp
+
+            if ($attribute_value -match "^[\d\.]+$")
+            {
+                $attribute_value = [int]$attribute_value
+            }
+
+            $JsonBody = @{ Attributes = @{
+                "$attribute_name"=$attribute_value
+                }} | ConvertTo-Json -Compress
             
-            # set PowerAction for the Manager resource instance
-            $temp = $hash_table."Actions"."#Manager.Reset"."target"
-            $uri_restart_manager = "https://$ip"+$temp
-
-            if($hash_table."Actions"."#Manager.Reset"."ResetType@Redfish.AllowableValues")
-            {
-                $JsonBody = @{ "ResetType" = "GracefulRestart"
-                    } | ConvertTo-Json -Compress
-            }
-            else 
-            {
-                $JsonBody = @{
-                    "Action" = "Manager.Reset"
-                    } | ConvertTo-Json -Compress
-            }
-
-            $response = Invoke-WebRequest -Uri $uri_restart_manager -Headers $JsonHeader -Method Post -Body $JsonBody -ContentType 'application/json'
+            $response = Invoke-WebRequest -Uri $uri_address_BiosPending -Headers $JsonHeader -Method Patch -Body $JsonBody -ContentType 'application/json'
 
             Write-Host
-            [String]::Format("- PASS, statuscode {0} returned successfully to restart manager",$response.StatusCode)
+            [String]::Format("- PASS, statuscode {0} returned successfully to scheduled bios attribute setting.",$response.StatusCode)
 
         }
         
         return $True
-        
     }
     catch
     {
