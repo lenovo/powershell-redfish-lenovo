@@ -167,14 +167,16 @@ function get_system_urls
     $system_url_collection = @()
     
     # Get the system url collection via Invoke-WebRequest
-    $base_url = "https://$bmcip/redfish/v1/Systems/"
-
+    $base_url = "https://$bmcip/redfish/v1/"
     $session_key = $session.'X-Auth-Token'
     $JsonHeader = @{ "X-Auth-Token" = $session_key
-
     }
-    
     $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+    $converted_object = $response.Content | ConvertFrom-Json
+    $systems_url = $converted_object.Systems."@odata.id"
+    $systems_url_string = "https://$bmcip" + $systems_url
+
+    $response = Invoke-WebRequest -Uri $systems_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
     
     # Convert response content to hash table
     $converted_object = $response.Content | ConvertFrom-Json
