@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_get_bios_attribute
+function get_bios_attribute
 {
    <#
    .Synopsis
@@ -42,7 +42,7 @@ function lenovo_get_bios_attribute
     - attribute_name: Pass in BIOS attribute name
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_get_bios_attribute -ip 10.10.10.10 -username USERID -password PASSW0RD -attribute_name XXX
+    get_bios_attribute -ip 10.10.10.10 -username USERID -password PASSW0RD -attribute_name XXX
    #>
    
     param(
@@ -95,10 +95,8 @@ function lenovo_get_bios_attribute
         $JsonHeader = @{ "X-Auth-Token" = $session_key
         }
 
-        # Check connection
-        $base_url = "https://$ip/redfish/v1/Systems/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
-        
+      
+       
         # Get the system url collection
         $system_url_collection = @()
         $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
@@ -110,24 +108,12 @@ function lenovo_get_bios_attribute
             
             # Get Bios from the System resource instance
             $uri_address_system = "https://$ip"+$system_url_string
-            if (-not $uri_address_system.EndsWith("/"))
-            {
-                $uri_address_system = $uri_address_system + "/"
-            }
             
             $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             
             $converted_object = $response.Content | ConvertFrom-Json
-            $hash_table = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-
-            $temp = [string]$hash_table.Bios
-            $uri_address_Bios = "https://$ip"+($temp.Split("=")[1].Replace("}",""))
-            if (-not $uri_address_Bios.EndsWith("/"))
-            {
-                $uri_address_Bios = $uri_address_Bios + "/"
-            }
-            
+            $Bios_url = $converted_object.Bios."@odata.id"
+            $uri_address_Bios = "https://$ip" + $Bios_url
             # Get Bios attributes from Bios tag
 
             $response = Invoke-WebRequest -Uri $uri_address_Bios -Headers $JsonHeader -Method Get -UseBasicParsing
