@@ -25,7 +25,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_get_bios_attribute_metadata
+function get_bios_attribute_metadata
 {
     <#
    .Synopsis
@@ -38,7 +38,7 @@ function lenovo_get_bios_attribute_metadata
     - system_id:Pass in ComputerSystem instance id(None: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_get_bios_attribute_metadata -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None 
+    get_bios_attribute_metadata -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None 
    #>
    
     param(
