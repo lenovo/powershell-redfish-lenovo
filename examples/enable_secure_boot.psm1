@@ -25,7 +25,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_enable_secure_boot
+function enable_secure_boot
 {
     <#
    .Synopsis
@@ -38,7 +38,7 @@ function lenovo_enable_secure_boot
     - system_id: Pass in System resource instance id(None: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_enable_secure_boot -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None
+    enable_secure_boot -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None
    #>
    
     param(
