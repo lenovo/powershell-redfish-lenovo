@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_enable_user
+function enable_bmc_user
 {
    <#
    .Synopsis
@@ -40,7 +40,7 @@ function lenovo_enable_user
     - userid: Pass in BMC username that will be enabled
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_enable_user -ip 10.10.10.10 -username USERID -password PASSW0RD -userid XXX
+    enable_bmc_user -ip 10.10.10.10 -username USERID -password PASSW0RD -userid XXX
    #>
    
     param(
@@ -87,7 +87,7 @@ function lenovo_enable_user
         }
 
         # Check connrction
-        $base_url = "https://$ip/redfish/v1"
+        $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         
         # Convert response content to hash table
