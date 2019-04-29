@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_reset_bios_default{
+function reset_bios_default{
    <#
    .Synopsis
     Cmdlet used to reset BIOS default values
@@ -39,7 +39,7 @@ function lenovo_reset_bios_default{
     - system_id: Pass in System resource instance id(none: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_reset_bios_default -ip 10.10.10.10 -username USERID -password PASSW0RD
+    reset_bios_default -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
@@ -90,10 +90,6 @@ function lenovo_reset_bios_default{
         #build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key
         }
-
-        # check connection
-        $base_url = "https://$ip/redfish/v1/Systems/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
         
         # get the system url collection
         $system_url_collection = @()
@@ -105,10 +101,6 @@ function lenovo_reset_bios_default{
             
             # get Bios from the System resource instance
             $uri_address_system = "https://$ip"+$system_url_string
-            if (-not $uri_address_system.EndsWith("/"))
-            {
-                $uri_address_system = $uri_address_system + "/"
-            }
             
             $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             
@@ -129,10 +121,6 @@ function lenovo_reset_bios_default{
             # Reset Bios default value for the System resource instance
             $temp = $hash_table."Actions"."#Bios.ResetBios"."target"
             $uri_reset_bios_default = "https://$ip"+ $temp
-
-            # $JsonBody = @{
-            #     "ResetType" = "default"
-            #     } | ConvertTo-Json -Compress
             
             $response = Invoke-WebRequest -Uri $uri_reset_bios_default -Headers $JsonHeader -Method Post -ContentType 'application/json'            
 

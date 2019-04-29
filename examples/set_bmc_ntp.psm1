@@ -1,6 +1,6 @@
 ###
 #
-# Lenovo Redfish examples - Set manager ntp
+# Lenovo Redfish examples - Set bmc ntp
 #
 # Copyright Notice:
 #
@@ -26,21 +26,21 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_set_manager_ntp
+function set_bmc_ntp
 {
     <#
    .Synopsis
-    Cmdlet used to set manager ntp
+    Cmdlet used to set bmc ntp
    .DESCRIPTION
-    Cmdlet used to set manager ntp from BMC using Redfish API. Set result will be printed to the screen. Connection information can be specified via command parameter or configuration file.
+    Cmdlet used to set bmc ntp from BMC using Redfish API. Set result will be printed to the screen. Connection information can be specified via command parameter or configuration file.
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
-    - ntp_server: Pass in ntp_server specified by user
-    - protocol: Pass in protocol Enabled type specified by user 
+    - ntp_server: Specify the names of  NTP servers, up to 4 NTP servers can be used
+    - enabled: Indicates if the NTP protocol is enabled or disabled. (0:false, 1:true)
    .EXAMPLE
-    lenovo_set_manager_ntp -ip 10.10.10.10 -username USERID -password PASSW0RD -ntp_server ['','','',''] -protocol 0
+    set_bmc_ntp -ip 10.10.10.10 -username USERID -password PASSW0RD -ntp_server 10.10.10.2 -enabled 0
    #>
    
     param
@@ -56,7 +56,7 @@ function lenovo_set_manager_ntp
         [Parameter(Mandatory=$True, HelpMessage="Input the ntp server(array  Items: string,Item count: 4)")]
         [array]$ntp_server,
         [Parameter(Mandatory=$True, HelpMessage="Input the rotocolEnabled (0:false, 1:true)")]
-        [int]$protocol
+        [int]$enabled
     )
         
     # Get configuration info from config file
@@ -90,8 +90,14 @@ function lenovo_set_manager_ntp
     
         # Get the manager url collection
         $manager_url_collection = @()
-        $base_url = "https://$ip/redfish/v1/Managers/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
+        $base_url = "https://$ip/redfish/v1/"
+        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+
+        
+        $managers_url = $converted_object.Managers."@odata.id"
+        $managers_url_string = "https://$ip" + $managers_url
+        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
        
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
@@ -116,9 +122,9 @@ function lenovo_set_manager_ntp
             
             $converted_object = $response.Content | ConvertFrom-Json
             $uri_network ="https://$ip"+$converted_object.NetworkProtocol.'@odata.id'
-            $parameter = @{"NTPServers"=$ntp_server; "ProtocolEnabled"=[bool]$protocol}
+            $parameter = @{"NTPServers"=$ntp_server; "ProtocolEnabled"=[bool]$enabled}
             
-            # Build request body and send requests to set manager ntp
+            # Build request body and send requests to set bmc ntp
             $body = @{"NTP"=$parameter}
             $json_body = $body | convertto-json
             try
@@ -147,7 +153,7 @@ function lenovo_set_manager_ntp
                 return $False
             }
             Write-Host
-            [String]::Format("- PASS, statuscode {0} returned successfully to set manager ntp successful",$response.StatusCode) 
+            [String]::Format("- PASS, statuscode {0} returned successfully to set bmc ntp successful",$response.StatusCode) 
         }
         return $True
     }

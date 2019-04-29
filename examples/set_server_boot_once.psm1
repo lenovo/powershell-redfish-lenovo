@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_set_server_boot_once
+function set_server_boot_once
 {
    <#
    .Synopsis
@@ -38,9 +38,9 @@ function lenovo_set_server_boot_once
     - password: Pass in BMC username password
     - system_id: Pass in ComputerSystem instance id(None: first instance, all: all instaces)
     - config_file: Pass in configuration file path, default configuration file is config.ini
-    - boot_source：Input the set server boot order("None", "Pxe", "Cd", "Usb","Hdd","BiosSetup","Diags","UefiTarget")
+    - boot_source: Input the set server boot order("None", "Pxe", "Cd", "Usb", "Hdd", "BiosSetup", "Diags")
    .EXAMPLE
-    lenovo_set_server_boot_once -ip 10.10.10.10 -username USERID -password PASSW0RD -boot_source Cd
+    set_server_boot_once -ip 10.10.10.10 -username USERID -password PASSW0RD -boot_source Cd
    #>
    
     param(
@@ -54,7 +54,7 @@ function lenovo_set_server_boot_once
         [string]$system_id="None",
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini",
-        [Parameter(Mandatory=$True, HelpMessage='Input the set server boot("None", "Pxe", "Cd", "Usb","Hdd","BiosSetup","Diags","UefiTarget")')]
+        [Parameter(Mandatory=$True, HelpMessage='Input the set server boot("None", "Pxe", "Cd", "Usb", "Hdd", "BiosSetup", "Diags")')]
         [string]$boot_source
         )
         

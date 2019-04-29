@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_update_user_password
+function update_bmc_user_password
 {
    <#
    .Synopsis
@@ -41,7 +41,7 @@ function lenovo_update_user_password
     - password_value: Pass in BMC user password to be updated
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_get_bmc_user_accounts -ip 10.10.10.10 -username USERID -password PASSW0RD -userid XXX -password_value XXX
+    update_bmc_user_password -ip 10.10.10.10 -username USERID -password PASSW0RD -userid XXX -password_value XXX
    #>
    
     param(
@@ -90,7 +90,7 @@ function lenovo_update_user_password
         }
 
         # check connrction
-        $base_url = "https://$ip/redfish/v1"
+        $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         
         # convert response content to hash table

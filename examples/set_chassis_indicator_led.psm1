@@ -25,7 +25,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_set_chassis_indicator_led
+function set_chassis_indicator_led
 {
    <#
    .Synopsis
@@ -36,9 +36,9 @@ function lenovo_set_chassis_indicator_led
     - username: Pass in BMC username
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
-    - led_status: Pass in led status specified by user
+    - led_status: Pass in led status specified by user(Off, Lit, Blinking)
    .EXAMPLE
-    lenovo_set_chassis indicator led -ip 10.10.10.10 -username USERID -password PASSW0RD -led_status Off
+    set_chassis_indicator_led -ip 10.10.10.10 -username USERID -password PASSW0RD -led_status Off
    #>
    
     param(
@@ -84,11 +84,16 @@ function lenovo_set_chassis_indicator_led
         # Build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key}
         
+        $base_url = "https://$ip/redfish/v1/"
+        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+
         # Create an null array for result return
         $chassis_url_collection = @()
         # Get the chassis url collection via Invoke-WebRequest
-        $base_url = "https://$ip/redfish/v1/Chassis/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
+        $chassis_url = $converted_object.Chassis."@odata.id"
+        $chassis_url_string = "https://$ip" + $chassis_url
+        $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
 
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
@@ -108,10 +113,6 @@ function lenovo_set_chassis_indicator_led
         {
             # Get chassis url from the chassis url collection
             $uri_address_chassis = "https://$ip"+$chassis_url_string
-            if (-not $uri_address_chassis.EndsWith("/"))
-            {
-                $uri_address_chassis = $uri_address_chassis + "/"
-            }
 
             # Build request body and send requests to set LED status
             $body = @{"IndicatorLED"=$led_status}

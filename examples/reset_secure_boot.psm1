@@ -24,7 +24,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_reset_secure_boot
+function reset_secure_boot
 {
     <#
    .Synopsis
@@ -38,7 +38,7 @@ function lenovo_reset_secure_boot
     - reset_keys_type:Pass in secure boot types(must be "DeleteAllKeys", "DeletePK" or "ResetAllKeysToDefault")
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_reset_secure_boot -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None -reset_keys_type DeleteAllKeys
+    reset_secure_boot -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None -reset_keys_type DeleteAllKeys
    #>
    
     param(

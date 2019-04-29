@@ -25,7 +25,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_set_server_asset_tag
+function set_server_asset_tag
 {
     <#
    .Synopsis
@@ -36,10 +36,10 @@ function lenovo_set_server_asset_tag
     - username: Pass in BMC username
     - password: Pass in BMC username password
     - system_id:Pass in ComputerSystem instance id(None: first instance, all: all instances)
-    - asset_tag:Pass in asset tag specified by user 
+    - asset_tag:Pass in asset tag specified by user(Maximum string length of asset tag is 32)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_set_server_asset_tag -ip 10.10.10.10 -username USERID -password PASSW0RD -asset_tag ASSERT
+    set_server_asset_tag -ip 10.10.10.10 -username USERID -password PASSW0RD -asset_tag ASSERT
    #>
         
     param(

@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_restart_manager
+function restart_bmc
 {
    <#
    .Synopsis
@@ -39,7 +39,7 @@ function lenovo_restart_manager
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_restart_manager -ip 10.10.10.10 -username USERID -password PASSW0RD
+    restart_bmc -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
@@ -94,8 +94,14 @@ function lenovo_restart_manager
         }
 
         # check connection
-        $base_url = "https://$ip/redfish/v1/Managers/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
+        $base_url = "https://$ip/redfish/v1/"
+        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+
+        
+        $managers_url = $converted_object.Managers."@odata.id"
+        $managers_url_string = "https://$ip" + $managers_url
+        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
         
         # get the manager url collection
         $manager_url_collection = @()
@@ -119,10 +125,6 @@ function lenovo_restart_manager
             
             # get Manager restart url from the Manager resource instance
             $uri_address_manager = "https://$ip"+$manager_url_string
-            if (-not $uri_address_manager.EndsWith("/"))
-            {
-                $uri_address_manager = $uri_address_manager + "/"
-            }
             
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             

@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_set_power_state
+function set_power_state
 {
    <#
    .Synopsis
@@ -41,7 +41,7 @@ function lenovo_set_power_state
     - reset_type: Pass in Power state reset type, such as: On, ForceOff, GracefulRestart, GracefulShutdown
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_set_power_state -ip 10.10.10.10 -username USERID -password PASSW0RD -reset_type ForceOff
+    set_power_state -ip 10.10.10.10 -username USERID -password PASSW0RD -reset_type ForceOff
    #>
    
     param(
@@ -111,10 +111,6 @@ function lenovo_set_power_state
             
             # Get Powerstate from the System resource instance
             $uri_address_system = "https://$ip"+$system_url_string
-            if (-not $uri_address_system.EndsWith("/"))
-            {
-                $uri_address_system = $uri_address_system + "/"
-            }
             
             $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             

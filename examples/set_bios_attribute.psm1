@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_set_bios_attribute
+function set_bios_attribute
 {
    <#
    .Synopsis
@@ -42,7 +42,7 @@ function lenovo_set_bios_attribute
     - attribute_value: Pass in BIOS attribute value
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_set_bios_attribute -ip 10.10.10.10 -username USERID -password PASSW0RD -attribute_name XXX -attribute_value XXX
+    set_bios_attribute -ip 10.10.10.10 -username USERID -password PASSW0RD -attribute_name XXX -attribute_value XXX
    #>
    
     param(
@@ -100,10 +100,6 @@ function lenovo_set_bios_attribute
         #build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key
         }
-
-        # check connection
-        $base_url = "https://$ip/redfish/v1/Systems/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
         
         # get the system url collection
         $system_url_collection = @()
@@ -116,10 +112,6 @@ function lenovo_set_bios_attribute
             
             # get Bios from the System resource instance
             $uri_address_system = "https://$ip"+$system_url_string
-            if (-not $uri_address_system.EndsWith("/"))
-            {
-                $uri_address_system = $uri_address_system + "/"
-            }
             
             $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             
@@ -129,10 +121,7 @@ function lenovo_set_bios_attribute
 
             $temp = [string]$hash_table.Bios
             $uri_address_Bios = "https://$ip"+($temp.Split("=")[1].Replace("}",""))
-            if (-not $uri_address_Bios.EndsWith("/"))
-            {
-                $uri_address_Bios = $uri_address_Bios + "/"
-            }
+       
 
             # get Bios attributes collections from Bios
             $response = Invoke-WebRequest -Uri $uri_address_Bios -Headers $JsonHeader -Method Get -UseBasicParsing

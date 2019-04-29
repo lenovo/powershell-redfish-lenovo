@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_set_bios_password{
+function set_bios_password{
    <#
    .Synopsis
     Cmdlet used to set BIOS password
@@ -41,7 +41,7 @@ function lenovo_set_bios_password{
     - system_id: Pass in System resource instance id(none: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_set_bios_password -ip 10.10.10.10 -username USERID -password PASSW0RD -bios_password_name XXX -bios_password XXX
+    set_bios_password -ip 10.10.10.10 -username USERID -password PASSW0RD -bios_password_name XXX -bios_password XXX
    #>
    
     param(
@@ -96,10 +96,6 @@ function lenovo_set_bios_password{
         #build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key
         }
-
-        # check connection
-        $base_url = "https://$ip/redfish/v1/Systems/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
         
         # get the system url collection
         $system_url_collection = @()
@@ -111,10 +107,6 @@ function lenovo_set_bios_password{
             
             # get Bios from the System resource instance
             $uri_address_system = "https://$ip"+$system_url_string
-            if (-not $uri_address_system.EndsWith("/"))
-            {
-                $uri_address_system = $uri_address_system + "/"
-            }
             
             $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             
@@ -151,6 +143,8 @@ function lenovo_set_bios_password{
     }
     catch
     {
+        $info=$_.InvocationInfo
+        [String]::Format("`n-Error occured! line:{0},col:{1},msg:{2}`n" ,$info.ScriptLineNumber,$info.OffsetInLine ,$_.Exception.Message)
         if($_.Exception.Response)
         {
             Write-Host "Error occured, error code:" $_.Exception.Response.StatusCode.Value__

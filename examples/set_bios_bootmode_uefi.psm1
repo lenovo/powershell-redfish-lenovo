@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_set_bios_bootmode_uefi
+function set_bios_bootmode_uefi
 {
     <#
     .Synopsis
@@ -40,7 +40,7 @@ function lenovo_set_bios_bootmode_uefi
      - system_id: Pass in System resource instance id(None: first instance, all: all instances)
      - config_file: Pass in configuration file path, default configuration file is config.ini
     .EXAMPLE
-      lenovo_set_bios_bootmode_uefi -ip 10.10.10.10 -username USERID -password PASSW0RD
+      set_bios_bootmode_uefi -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
     param(
         [Parameter(Mandatory=$False)]
