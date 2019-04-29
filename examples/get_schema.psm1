@@ -25,7 +25,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_get_schema
+function get_schema
 {
     <#
    .Synopsis
@@ -38,7 +38,7 @@ function lenovo_get_schema
     - schema_prefix:Pass in schema prefix, get all schema with 'all', default value is 'all'
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_get_schema -ip 10.10.10.10 -username USERID -password PASSW0RD -schema_prefix all
+    get_schema -ip 10.10.10.10 -username USERID -password PASSW0RD -schema_prefix all
    #>
    
     param(

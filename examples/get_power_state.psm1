@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_get_power_state
+function get_power_state
 {
    <#
    .Synopsis
@@ -40,7 +40,7 @@ function lenovo_get_power_state
     - system_id: Pass in System resource instance id(none: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_get_power_state -ip 10.10.10.10 -username USERID -password PASSW0RD
+    get_power_state -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
@@ -99,14 +99,8 @@ function lenovo_get_power_state
         # Loop all System resource instance in $system_url_collection
         foreach ($system_url_string in $system_url_collection)
         {
-            
+            $uri_address_system = "https://$ip" + $system_url_string
             # Get PowerState from the System resource instance
-            $uri_address_system = "https://$ip"+$system_url_string
-            if (-not $uri_address_system.EndsWith("/"))
-            {
-                $uri_address_system = $uri_address_system + "/"
-            }
-
             $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
 
             $converted_object = $response.Content | ConvertFrom-Json

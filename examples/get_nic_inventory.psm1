@@ -25,7 +25,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_get_nic_inventory
+function get_nic_inventory
 {
     <#
    .Synopsis
@@ -38,7 +38,7 @@ function lenovo_get_nic_inventory
     - system_id:Pass in ComputerSystem instance id(None: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_get_nic_inventory -ip 10.10.10.10 -username USERID -password PASSW0RD
+    get_nic_inventory -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
