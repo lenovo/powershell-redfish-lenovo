@@ -25,7 +25,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function get_all_bios_attribute
+function get_all_bios_attributes
 {
     <#
    .Synopsis
