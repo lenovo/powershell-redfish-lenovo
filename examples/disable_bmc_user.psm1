@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_disable_user
+function disable_bmc_user
 {
    <#
    .Synopsis
@@ -40,7 +40,7 @@ function lenovo_disable_user
     - userid: Pass in BMC username that will be disabled
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_disable_user -ip 10.10.10.10 -username USERID -password PASSW0RD -userid XXX
+    disable_bmc_user -ip 10.10.10.10 -username USERID -password PASSW0RD -userid XXX
    #>
    
     param(
