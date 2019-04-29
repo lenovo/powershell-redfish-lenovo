@@ -26,7 +26,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_get_system_log
+function get_system_log
 {
    <#
    .Synopsis
@@ -38,7 +38,7 @@ function lenovo_get_system_log
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_get_system_log -ip 10.10.10.10 -username USERID -password PASSW0RD 
+    get_system_log -ip 10.10.10.10 -username USERID -password PASSW0RD 
    #>
    
     param(
@@ -81,9 +81,13 @@ function lenovo_get_system_log
         $JsonHeader = @{ "X-Auth-Token" = $session_key}
         
         # Get the manager url collection
-        $manager_url_collection = @()
-        $base_url = "https://$ip/redfish/v1/Managers/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
+        $base_url = "https://$ip/redfish/v1/"
+        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+        
+        $managers_url = $converted_object.Managers."@odata.id"
+        $managers_url_string = "https://$ip" + $managers_url
+        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
       
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
@@ -93,8 +97,7 @@ function lenovo_get_system_log
         # Set the $manager_url_collection
         foreach ($i in $hash_table.Members)
         {
-            $i = [string]$i
-            $manager_url_string = ($i.Split("=")[1].Replace("}",""))
+            $manager_url_string = $i."@odata.id"
             $manager_url_collection += $manager_url_string
         }
 
@@ -104,10 +107,6 @@ function lenovo_get_system_log
         
             # Get LogServices from the Manager resource instance
             $uri_address_manager = "https://$ip"+$manager_url_string
-            if (-not $uri_address_manager.EndsWith("/"))
-            {
-                $uri_address_manager = $uri_address_manager + "/"
-            }
             
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             
@@ -117,10 +116,6 @@ function lenovo_get_system_log
             
             $temp = [string]$hash_table.LogServices
             $uri_address_LogServices = "https://$ip"+($temp.Split("=")[1].Replace("}",""))
-            if (-not $uri_address_LogServices.EndsWith("/"))
-            {
-                $uri_address_LogServices = $uri_address_LogServices + "/"
-            }
             
             # Get log collections from LogServices
             $response = Invoke-WebRequest -Uri $uri_address_LogServices -Headers $JsonHeader -Method Get -UseBasicParsing
@@ -135,10 +130,6 @@ function lenovo_get_system_log
                 # Get Entries uri address about the log service
                 $i=[string]$i
                 $uri_address_log_service = "https://$ip"+($i.Split("=")[1].Replace("}",""))
-                if (-not $uri_address_log_service.EndsWith("/"))
-                {
-                    $uri_address_log_service = $uri_address_log_service + "/"
-                }
                 
                 $sub_response = Invoke-WebRequest -Uri $uri_address_log_service -Headers $JsonHeader -Method Get -UseBasicParsing 
                 $converted_object = $sub_response.Content | ConvertFrom-Json
@@ -146,10 +137,6 @@ function lenovo_get_system_log
                 $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
                 $temp = [string]$hash_table.Entries
                 $uri_address_log_service_entries = "https://$ip"+($temp.Split("=")[1].Replace("}",""))
-                if (-not $uri_address_log_service_entries.EndsWith("/"))
-                {
-                    $uri_address_log_service_entries = $uri_address_log_service_entries + "/"
-                }
                 
                 # Get detail log information from log service's Entries uri
                 
