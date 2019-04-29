@@ -83,9 +83,16 @@ function lenovo_clear_system_log
         # Build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key}
 
+        $base_url = "https://$ip/redfish/v1/"
+        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+
+        
+        $managers_url = $converted_object.Managers."@odata.id"
+        $managers_url_string = "https://$ip" + $managers_url
+        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
+
         $manager_url_collection = @()
-        $base_url = "https://$ip/redfish/v1/Managers/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
        
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
