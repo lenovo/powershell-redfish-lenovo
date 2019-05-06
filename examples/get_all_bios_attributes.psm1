@@ -39,7 +39,7 @@ function get_all_bios_attributes
     - bios_get:Pass in the bios attribute to get the current setting or the pending setting (must be current or pending)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    get_all_bios_attribute -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None -bios_get current
+    get_all_bios_attributes -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None -bios_get current
    #>
    
    param(

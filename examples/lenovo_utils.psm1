@@ -233,6 +233,14 @@ function read_config
         )
     
     $hash_table = @{'BmcIp'=''; 'BmcUsername'=''; 'BmcUserpassword'=''; 'SystemId'=''; 'ManagerId'=''; 'ChassisId'=''}
+    if (-not [system.IO.File]::Exists($config_file))
+    {
+        $config_file = $PSScriptRoot + '\config.ini'
+        if (-not [system.IO.File]::Exists($config_file))
+        {
+            return $hash_table
+        }
+    }
     $payload = Get-Content -Path $config_file |
     Where-object {$_ -like '*=*'} |
     ForEach-Object {
