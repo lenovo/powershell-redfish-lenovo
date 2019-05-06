@@ -25,7 +25,7 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_set_power_limit
+function set_power_limit
 {
     <#
    .Synopsis
@@ -40,7 +40,7 @@ function lenovo_set_power_limit
     - isenable: It is used to set power capping enabled or disabled(0:disabled,1:enabled). When power capping is enabled, the system may be throttled in order to maintain the power limit, you can set powerlimit using parameter powerlimit. Note: Even when power capping is disabled, the system may be throttled under certain fault conditions, such as when there is a power supply failure or a cooling issue, etc.
     - powerlimit: Input the power limit you want to set. (When isnable is 1,you must set powerlimit. When isnable is 0, your setting is meaningless). Note:The manual setting of maximum power limit can be over the actual power capacity. (1-32766).
    .EXAMPLE
-    lenovo_set_power_limit -ip 10.10.10.10 -username USERID -password PASSW0RD -isenable 1 -powerlimit 400
+    set_power_limit -ip 10.10.10.10 -username USERID -password PASSW0RD -isenable 1 -powerlimit 400
    #>
    
     param(
@@ -136,7 +136,7 @@ function lenovo_set_power_limit
             #get power limit info
             $list_control_info = @()
             $list_control_info = $converted_object.PowerControl
-            if($list_control_info.length -eq 0 -or $list_control_info[0].PowerLimit)
+            if(($list_control_info.length -eq 0) -or ($list_control_info[0].PowerLimit.length -eq 0))
             {
                 Write-Host "Not Supporting this function"
                 return $False
@@ -154,11 +154,11 @@ function lenovo_set_power_limit
 
            if($isenable -eq 1)
            {
-                $JsonBody = '{"PowerControl": [{"Oem":{"PowerLimit":{"LimitInWatts":' + $powerlimit.ToString() + '}}]}'
+                $JsonBody = '{"PowerControl": [{"PowerLimit":{"LimitInWatts":' + $powerlimit.ToString() + '}}]}'
            }
            else
            {
-                $JsonBody = '{"PowerControl": [{"Oem":{"PowerLimit":{"LimitInWatts":'+"null"+ '}}]}'
+                $JsonBody = '{"PowerControl": [{"PowerLimit":{"LimitInWatts":' + "null" + '}}]}'
            }
            $response = Invoke-WebRequest -Uri $power_url -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
            Write-Host
