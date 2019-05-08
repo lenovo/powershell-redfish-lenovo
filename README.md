@@ -7,7 +7,7 @@ Description
 
 This project includes a set of sample PowerShell scripts that utilize the Redfish API to manage Lenovo ThinkSystem servers.
 
-For more information on the Redfish API, visit http://redfish.dmtf.org/
+For more information on the Redfish API, visit <http://redfish.dmtf.org/>
 
 Installing
 ----------
@@ -16,8 +16,8 @@ Installing
   `git clone https://github.com/lenovo/powershell-redfish-lenovo`
   A set of PowerShell examples is provided under the examples directory of this project.
 
-* In order for these scripts to be executed, the execution policy needs to be lowered from "restricted". For instance, set the policy to "remotesigned" by running the following:
-  `Set-ExecutionPolicy remoteSigned`
+* In order for these scripts to be executed, the execution policy needs to be lowered from "Restricted". For instance, set the policy to "RemoteSigned" by running the following:
+  `Set-ExecutionPolicy RemoteSigned`
 
 * Import example scripts individually as PowerShell modules, or auto-import all modules by enabling a profile
 
@@ -25,6 +25,7 @@ Installing
     1. Open a PowerShell terminal and navigate to .\examples directory in powershell-redfish-lenovo
     2. Import the target script using Import-Module. For example:
     `Import-Module .\get_power_state.psm1`
+
 
   To automatically import all scripts by enabling a profile:
     1. Open a PowerShell terminal and type in `$profile`, This should display the path that would be used to store your profile
