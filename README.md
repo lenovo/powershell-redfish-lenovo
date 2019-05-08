@@ -3,7 +3,6 @@
 Sample PowerShell scripts for using the Redfish API on Lenovo servers
 
 Description
-
 ----------
 
 This project includes a set of sample PowerShell scripts that utilize the Redfish API to manage Lenovo ThinkSystem servers.
@@ -11,7 +10,6 @@ This project includes a set of sample PowerShell scripts that utilize the Redfis
 For more information on the Redfish API, visit http://redfish.dmtf.org/
 
 Installing
-
 ----------
 
 * Get PowerShell Redfish Scripts
@@ -47,13 +45,11 @@ Installing
     7. These files will automatically be imported as modules on evry new PowerShell session.
 
 Requirements
-
 ----------
 
 * PowerShell 5.0 or later
 
 Usage
-
 ----------
 
 * Use "Get-Module" command to get imported module list in a PowerShell terminal
@@ -68,7 +64,6 @@ Usage
 * Use can use a configuration file to store common parameters for the Lenovo PowerShell Redfish Scripts, such as the BMC IP address, user name, password. Default configuration file is config.ini, which is located in same folder with the scripts. You can create your own configuration file and specify it using the "--config" option. The scripts will load config.ini automatically if no configuration file is specified in command line.
 
 Contributing
-
 ----------
 
 1. Fork it!
@@ -78,8 +73,7 @@ Contributing
 5. Submit a pull request :D
 
 Copyright and License
-
-----------
+---------------------
 
 Copyright 2019 Lenovo Corporation
 
