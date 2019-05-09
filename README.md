@@ -32,7 +32,7 @@ Installing
     2. Run `test-path $profile` to check whether your profile is already created
     3. If the profile is not created, type `new-item -path $profile -itemtype file -force` to create the profile
     4. You can customize the profile by launching the PowerShell ISE: `powershell_ise $profile`. This will open the profile ps1 file (typically named "Microsoft.PowerShell_profile.ps1")
-    5. Enter the following code to the profile ps1 file. This will automatically import all the scripts on PowrShell startup:
+    5. Enter the following code to the profile ps1 file. This will automatically import all the scripts on PowerShell startup:
 
        ```
        # directory where scripts are stored
@@ -43,7 +43,7 @@ Installing
        ```
 
     6. Copy the powershell-redfish-lenovo repo ".psm1" example files to your "autoload" folder
-    7. These files will automatically be imported as modules on evry new PowerShell session.
+    7. These files will automatically be imported as modules on every new PowerShell session.
 
 Requirements
 ----------
@@ -62,7 +62,7 @@ Usage
 * Use command options to specify target BMC connection information
   `get_power_state -ip 10.10.10.10 -username USERID -password PASSW0RD`
 
-* Use can use a configuration file to store common parameters for the Lenovo PowerShell Redfish Scripts, such as the BMC IP address, user name, and password. Default configuration file is config.ini, which is located in same folder with the scripts. You can create your own configuration file and specify it using the "--config" option. The scripts will load config.ini automatically if no configuration file is specified in command line.
+* User can use a configuration file to store common parameters for the Lenovo PowerShell Redfish Scripts, such as the BMC IP address, user name, and password. Default configuration file is config.ini, which is located in same folder with the scripts. You can create your own configuration file and specify it using the "-config_file" option. The scripts will load config.ini automatically if no configuration file is specified in command line.
 
 Contributing
 ----------
