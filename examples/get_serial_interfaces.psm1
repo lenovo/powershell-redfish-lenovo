@@ -161,7 +161,9 @@ function get_serial_interfaces
                     $serial_interfaces_dict[$key] = $hash_table.$key
                 }  
             }
-            return $serial_interfaces_dict
+            
+            # Output result
+            ConvertOutputHashTableToObject $serial_interfaces_dict
         }
     }    
     catch

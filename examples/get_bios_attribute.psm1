@@ -125,13 +125,14 @@ function get_bios_attribute
             if($hash_table.Attributes.$attribute_name)
             {
                 $ret = @{$attribute_name = $hash_table.Attributes.$attribute_name}
+                # Output result
+                ConvertOutputHashTableToObject $ret
             }
             else
             {
                 $ret = $False
+                return $ret
             }
-
-            return $ret
 
         }
     }

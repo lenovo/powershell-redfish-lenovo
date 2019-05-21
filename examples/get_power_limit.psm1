@@ -137,8 +137,8 @@ function get_power_limit
                 {
                     $power_limit.psobject.properties | Foreach { $ht_limit_info[$_.Name] = $_.Value }
                 }
-                $ht_limit_info
-                Write-Host " "
+                # Output result
+                ConvertOutputHashTableToObject $ht_limit_info
             }
             
         }

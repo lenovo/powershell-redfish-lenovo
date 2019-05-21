@@ -149,8 +149,9 @@ function get_virtual_media
                         $virtual_media[$key] = $hash_table.$key
                     }  
                 }
-                $virtual_media_collection += $virtual_media
+                $virtual_media_collection += (ConvertOutputHashTableToObject $virtual_media)
             }
+            # Output result
             $virtual_media_collection
         }
     }    

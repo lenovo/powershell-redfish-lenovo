@@ -135,9 +135,8 @@ function lenovo_get_bmc_user_accounts
                     $bmc_user['AssignedPrivileges'] = $converted_object.AssignedPrivileges
                     $bmc_user['OemPrivileges'] = $converted_object.OemPrivileges
                 }
-
-                Write-Host
-                $bmc_user      
+                # Output result
+                ConvertOutputHashTableToObject $bmc_user      
             }
         }
     }

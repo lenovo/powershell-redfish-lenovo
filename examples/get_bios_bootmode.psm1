@@ -106,7 +106,7 @@ function get_bios_bootmode
             
             # Get bios boot mode information
             $boot_mode_dict["BootSourceOverrideMode"] = $converted_object."Boot"."BootSourceOverrideMode"
-            $boot_mode_dict
+            ConvertOutputHashTableToObject $boot_mode_dict
         }
         
     }

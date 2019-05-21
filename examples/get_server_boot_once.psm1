@@ -106,7 +106,7 @@ function get_server_boot_once
             
             # Get bios boot once information
             $boot_once_dict["BootSourceOverrideTarget"] = $converted_object."Boot"."BootSourceOverrideTarget"
-            $boot_once_dict
+            ConvertOutputHashTableToObject $boot_once_dict
         }
         
     }

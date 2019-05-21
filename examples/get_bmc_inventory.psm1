@@ -156,10 +156,9 @@ function get_bmc_inventory
                 $list_serial += $object.PSObject.ToString()
             }
 
-            # Return result
+            # Output result
             $ht_bmc_info["serial_info"] = $list_serial
-            $ht_bmc_info
-            Write-Host ""
+            ConvertOutputHashTableToObject $ht_bmc_info
         }
         
     }
