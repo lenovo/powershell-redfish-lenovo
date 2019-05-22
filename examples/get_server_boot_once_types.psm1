@@ -106,7 +106,7 @@ function get_server_boot_once_types
             
             # Get bios boot once information
             $boot_once_dict["BootSourceOverrideTarget@Redfish.AllowableValues"] = $converted_object."Boot"."BootSourceOverrideTarget@Redfish.AllowableValues"
-            $boot_once_dict
+            ConvertOutputHashTableToObject $boot_once_dict
         }
         
     }

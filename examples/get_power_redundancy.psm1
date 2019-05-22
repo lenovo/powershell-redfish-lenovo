@@ -139,8 +139,8 @@ function get_power_redundancy
                 $ht_redundancy_info["MinNumNeeded"] = $redundancy_info.MinNumNeeded
                 $ht_redundancy_info["MaxNumSupported"] = $redundancy_info.MaxNumSupported
                 $ht_redundancy_info["Mode"] = $redundancy_info.Mode
-                $ht_redundancy_info
-                Write-Host " "
+                # Output result
+                ConvertOutputHashTableToObject $ht_redundancy_info
             }
             
         }

@@ -176,9 +176,9 @@ function get_storage_inventory
                     $storage_info["Drives"] = $drive_list
                 }
                 
-                $storage_info["StorageControllers"] = $storage_list              
-                $storage_info
-                Write-Host
+                $storage_info["StorageControllers"] = $storage_list
+                # Output result
+                ConvertOutputHashTableToObject $storage_info
             }
             
         }

@@ -129,9 +129,8 @@ function get_psu_inventory
                 $ht_power_supply["Health"] = $power_supply.Status.Health
                 $ht_power_supply["Manufacturer"] = $power_supply.Manufacturer
                 
-                # Return result
-                $ht_power_supply
-                Write-Host ""
+                # Output result
+                ConvertOutputHashTableToObject $ht_power_supply
             }
         }
     }

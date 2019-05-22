@@ -118,9 +118,8 @@ function get_bmc_ntp
             $uri_network ="https://$ip"+$converted_object.NetworkProtocol.'@odata.id'
             $response = Invoke-WebRequest -Uri $uri_network -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
-            
+            # Output result
             $converted_object.NTP.NTPServers
-            Write-Host " "
         }
     }
     catch

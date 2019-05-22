@@ -141,8 +141,9 @@ function get_volt_inventory
                     }
                     $ht_voltage_info[$key] = $hash_table[$key]
                 }
-                $ht_voltage_info
-                Write-Host " "
+                
+                # Output result
+                ConvertOutputHashTableToObject $ht_voltage_info
             }
             
         }

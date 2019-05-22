@@ -120,7 +120,8 @@ function lenovo_get_bios_boot_order
             $boot_order_info."BootOrderNext" = $converted_object."BootOrderNext"
             $boot_order_info."BootOrderSupported" = $converted_object."BootOrderSupported"
             $boot_order_info."BootOrderCurrent" = $converted_object."BootOrderCurrent"
-            $boot_order_info
+            # Output result
+            ConvertOutputHashTableToObject $boot_order_info
         }
         
     }

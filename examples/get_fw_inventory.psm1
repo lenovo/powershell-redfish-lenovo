@@ -117,7 +117,7 @@ function get_fw_inventory
             $converted_object = $response_firmware_x_url.Content | ConvertFrom-Json
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-            # Create an null hash table for firmware inventory return 
+            # Create an null hash table for firmware inventory return
             $fw = @{}
             $fw["Name"] = $hash_table.Name
             $fw["Version"] = $hash_table.Version
@@ -130,8 +130,8 @@ function get_fw_inventory
             {
                 $fw["State"] = $hash_table.Status.State
             }
-            Write-Host
-            $fw
+            # Output result
+            ConvertOutputHashTableToObject $fw
         }
 
     }
