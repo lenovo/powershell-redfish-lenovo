@@ -107,9 +107,9 @@ function get_power_state
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
             
-            # Return hash table
+            # Output result
             $ret = @{"PowerState" = $hash_table.PowerState}
-            return $ret
+            ConvertOutputHashTableToObject $ret
 
         }
     }

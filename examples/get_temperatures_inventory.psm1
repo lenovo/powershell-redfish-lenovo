@@ -141,8 +141,8 @@ function get_temperatures_inventory
                     }
                     $ht_temperatures_info[$key] = $hash_table[$key]
                 }
-                $ht_temperatures_info
-                Write-Host " "
+                # Output result
+                ConvertOutputHashTableToObject $ht_temperatures_info
             }
             
         }

@@ -252,3 +252,28 @@ function read_config
     
     return $hash_table
 }
+
+function ConvertOutputHashTableToObject
+{
+   <#
+   .Synopsis
+    Convert output HashTable to Object
+   .DESCRIPTION
+    Convert output HashTable to Object
+    - outputhash: HashTable format output
+   #>
+
+    param(
+        [Parameter(Mandatory=$False)]
+        [hashtable]$outputhash
+        )
+
+    $object = New-Object Object
+
+    $outputhash.GetEnumerator()| ForEach-Object {
+        Add-Member -inputObject $object -memberType NoteProperty -name $_.Name -value $_.Value
+    }
+
+    return $object
+
+}

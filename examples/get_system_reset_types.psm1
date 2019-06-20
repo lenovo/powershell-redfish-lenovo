@@ -106,7 +106,8 @@ function get_system_reset_types
             
             # Get bios boot once information
             $reset_types["ResetType@Redfish.AllowableValues"] = $converted_object."Actions"."#ComputerSystem.Reset"."ResetType@Redfish.AllowableValues"
-            $reset_types
+            # Output result
+            ConvertOutputHashTableToObject $reset_types
         }
         
     }

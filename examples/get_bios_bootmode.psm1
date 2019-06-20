@@ -127,7 +127,7 @@ function get_bios_bootmode
             }
 
             $boot_mode_dict["BootMode"] = $hash_table.Attributes.$attribute_name
-            $boot_mode_dict
+            ConvertOutputHashTableToObject $boot_mode_dict
         }
         
     }
