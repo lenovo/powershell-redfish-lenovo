@@ -102,10 +102,31 @@ function get_bios_bootmode
             # Get system resource
             $url_address_system = "https://$ip"+$system_url_string
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
+
+            # Get Bios resource
             $converted_object = $response.Content | ConvertFrom-Json
-            
-            # Get bios boot mode information
-            $boot_mode_dict["BootSourceOverrideMode"] = $converted_object."Boot"."BootSourceOverrideMode"
+            $Bios_url = $converted_object.Bios."@odata.id"
+            $uri_address_Bios = "https://$ip" + $Bios_url
+            $response = Invoke-WebRequest -Uri $uri_address_Bios -Headers $JsonHeader -Method Get -UseBasicParsing
+
+            # Get boot mode from bios attributes
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            if($hash_table.Attributes."BootMode")
+            {
+                $attribute_name = "BootMode"
+            }
+            elseif($hash_table.Attributes."SystemBootMode")
+            {
+                $attribute_name = "SystemBootMode"
+            }
+            else
+            {
+                $attribute_name = "BootModes_SystemBootMode"
+            }
+
+            $boot_mode_dict["BootMode"] = $hash_table.Attributes.$attribute_name
             ConvertOutputHashTableToObject $boot_mode_dict
         }
         
