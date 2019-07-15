@@ -140,6 +140,7 @@ function lenovo_delete_bmc_user
             }
 
             $JsonBody = @{"UserName"=""
+                    "Enabled" = $false
                 } | ConvertTo-Json -Compress
         }
         else
@@ -149,6 +150,7 @@ function lenovo_delete_bmc_user
                 }
 
             $JsonBody = @{"UserName"=""
+                    "Enabled" = $false
                 } | ConvertTo-Json -Compress
         }
         $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'

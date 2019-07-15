@@ -39,7 +39,7 @@ function lenovo_create_bmc_user
     - config_file: Pass in configuration file path, default configuration file is config.ini
     - newusername: Pass in the update account username
     - newuserpassword: Pass in user new userpasswd
-    - authority: The value of this parameter shall be the privileges that this user includes. For super user, this property shall be Supervisor. default is super user. For pre-defined user, this property shall be ReadOnly. For custom user some implementations may not allow writing this property. You can only choose one or more values in the list:[UserroleManagement,RemoteConsoleAccess,RemoteConsoleAndVirtualMediaAcccess,RemoteServerPowerRestartAccess,AbilityClearEventLogs,AdapterConfiguration_Basic,AdapterConfiguration_NetworkingAndSecurity,AdapterConfiguration_Advanced]
+    - authority: The value of this parameter shall be the privileges that this user includes. For super user, this property shall be Supervisor. default is Supervisor. For the user to view information only, this property shall be ReadOnly. For other OEM authority, You can only choose one or more values in the OEM privileges list:[UserroleManagement,RemoteConsoleAccess,RemoteConsoleAndVirtualMediaAcccess,RemoteServerPowerRestartAccess,AbilityClearEventLogs,AdapterConfiguration_Basic,AdapterConfiguration_NetworkingAndSecurity,AdapterConfiguration_Advanced]
    .EXAMPLE
     lenovo_create_bmc_user -ip 10.10.10.10 -username USERID -password PASSW0RD -newusername NEWUSERNAME -newuserpassword NEWPASSW0RD -authority @("Supervisor")
    #>
@@ -115,6 +115,7 @@ function lenovo_create_bmc_user
 
         #Get the first empty account url
         $url_dest = ""
+        $roleuri = ""
         foreach($url_tmp_account in $list_url_account)
         {
             $url_account = "https://$ip" + $url_tmp_account
@@ -124,6 +125,7 @@ function lenovo_create_bmc_user
             if($converted_object.UserName -eq "" -and $url_dest -eq "")
             {
                 $url_dest = $url_account
+                $roleuri = $converted_object."Links"."Role"."@odata.id"
             }
             elseif($converted_object.UserName -eq $newusername)
             {
@@ -139,12 +141,30 @@ function lenovo_create_bmc_user
 
         #Set rolename
         $role_name = ""
-       
-        $role_name = "CustomRole" + $url_dest.Split("/")[-1]
-        $result = set_user_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
-        if($result -ne $True)
+        if("Supervisor"  -in $authority)
         {
-            return $False
+            $role_name = "Administrator"
+        }elseif("Operator"  -in $authority)
+        {
+            $role_name = "Operator"
+        }elseif("ReadOnly"  -in $authority)
+        {
+            $role_name = "ReadOnly"
+        }else
+        {
+            $role_name = "CustomRole" + $url_dest.Split("/")[-1]
+        }
+        $links_role = @{}
+        if("CustomRole"  -in $role_name)
+        {
+            $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
+            if($result -ne $True)
+            {
+                return $False
+            }
+        }elseif(-not ($role_name -in $roleuri))
+        {
+            $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
         }
 
         $response = Invoke-WebRequest -Uri $url_dest -Headers $JsonHeader -Method Get -UseBasicParsing 
@@ -155,11 +175,22 @@ function lenovo_create_bmc_user
             $JsonHeader = @{ "If-Match" = $converted_object.'@odata.etag'
             "X-Auth-Token" = $session_key
             }
-
-            $JsonBody = @{ "Password"=$newuserpassword
+            if($links_role)
+            {
+                $JsonBody = @{ "Password"=$newuserpassword
                     "UserName"=$newusername
                     "RoleId"=$role_name
+                    "Enabled" = $true
+                    "Links" = $links_role
                 } | ConvertTo-Json -Compress
+            }else
+            {
+                $JsonBody = @{ "Password"=$newuserpassword
+                    "UserName"=$newusername
+                    "RoleId"=$role_name
+                    "Enabled" = $true
+                } | ConvertTo-Json -Compress
+            }
         }
         else
         {
@@ -167,11 +198,24 @@ function lenovo_create_bmc_user
             "X-Auth-Token" = $session_key
                 }
 
-            $JsonBody = @{ "Password"=$newuserpassword
+            if($links_role)
+            {
+                $JsonBody = @{ "Password"=$newuserpassword
                     "UserName"=$newusername
                     "RoleId"=$role_name
+                    "Enabled" = $true
+                    "Links" = $links_role
                 } | ConvertTo-Json -Compress
+            }else
+            {
+                $JsonBody = @{ "Password"=$newuserpassword
+                    "UserName"=$newusername
+                    "RoleId"=$role_name
+                    "Enabled" = $true
+                } | ConvertTo-Json -Compress
+            }
         }
+
         $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
         Write-Host
                 [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
@@ -211,7 +255,7 @@ function lenovo_create_bmc_user
     }
 }
 
-function set_user_privileges
+function set_custom_role_privileges
 {
     param
     (
