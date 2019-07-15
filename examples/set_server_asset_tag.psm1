@@ -89,10 +89,6 @@ function set_server_asset_tag
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
-
-        # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
-        }
         
         # Get the system url collection
         $system_url_collection = @()
@@ -101,14 +97,37 @@ function set_server_asset_tag
         # Loop all System resource instance in $system_url_collection
         foreach($system_url_string in $system_url_collection)
         {
-            # Set AssetTag
             $url_address_system = "https://$ip"+$system_url_string
+
+            # Build headers with sesison key for authentication
+            $JsonHeader = @{ "X-Auth-Token" = $session_key
+            }
+
+            # get etag to set If-Match precondition
+            $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            if($converted_object."@odata.etag" -ne $null)
+            {
+                $JsonHeader = @{ "If-Match" = $converted_object."@odata.etag"
+                            "X-Auth-Token" = $session_key
+                }
+            }
+            else
+            {
+                $JsonHeader = @{ "If-Match" = ""
+                            "X-Auth-Token" = $session_key
+                }
+            }
+
+            # Set AssetTag
             $JsonBody = @{"AssetTag" = $asset_tag} | ConvertTo-Json -Compress
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Patch -Body $JsonBody  -ContentType 'application/json'
             
             # Return result
-            $result = @{ret = "True";msg = "Post $url_address_system command successfully completed"}
-            $result
+            Write-Host
+            [String]::Format("- PASS, statuscode {0} returned successfully to set asset tag {1}", $response.StatusCode, $asset_tag)
+
+            return $True
         }
     }
     catch
