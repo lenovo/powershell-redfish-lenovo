@@ -27,7 +27,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_clear_system_log
+function clear_system_log
 {
    <#
    .Synopsis
@@ -39,7 +39,7 @@ function lenovo_clear_system_log
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_clear_system_log -ip 10.10.10.10 -username USERID -password PASSW0RD -config_file config.ini
+    clear_system_log -ip 10.10.10.10 -username USERID -password PASSW0RD -config_file config.ini
    #>
    
     param(
@@ -144,8 +144,27 @@ function lenovo_clear_system_log
                 }
 
                 # Build request body and send requests to clear the system log
-                $body = @{"Action"="LogService.ClearLog"}
+                $body = @{}
+                if($converted_object.Actions.'#LogService.ClearLog'.'@Redfish.ActionInfo')
+                {
+                   $url_actioninfo = "https://$ip"+$hash_table2.Actions.'#LogService.ClearLog'.'@Redfish.ActionInfo'
+                   $response = Invoke-WebRequest -Uri $url_actioninfo -Headers $JsonHeader -Method Get -UseBasicParsing
+                   $converted_object = $response.Content | ConvertFrom-Json
+                   foreach($parameter in $converted_object."Parameters")
+                   {
+                       if($parameter."Name" -and $parameter."AllowableValues")
+                       {
+                           $values = $parameter."AllowableValues"
+                           $body = @{$parameter."Name"=$values[0]}
+                       }
+                   }
+                }else
+                {
+                    $body = @{"Action"="LogService.ClearLog"}
+                }
                 $json_body = $body | convertto-json
+
+                # perform patch
                 try
                 {
                     $response_clear_log = Invoke-WebRequest -Uri $clear_log_url_string -Headers $JsonHeader -Method Post  -Body $json_body -ContentType 'application/json'

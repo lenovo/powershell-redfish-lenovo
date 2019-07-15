@@ -104,8 +104,22 @@ function get_system_reset_types
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             
-            # Get bios boot once information
-            $reset_types["ResetType@Redfish.AllowableValues"] = $converted_object."Actions"."#ComputerSystem.Reset"."ResetType@Redfish.AllowableValues"
+            if($converted_object."Actions"."#ComputerSystem.Reset"."ResetType@Redfish.AllowableValues" -ne $null)
+            {
+                $reset_types["ResetType@Redfish.AllowableValues"] = $converted_object."Actions"."#ComputerSystem.Reset"."ResetType@Redfish.AllowableValues"
+            }elseif($converted_object."Actions"."#ComputerSystem.Reset"."@Redfish.ActionInfo" -ne $null)
+            {
+                $url_actioninfo = "https://$ip"+$converted_object."Actions"."#ComputerSystem.Reset"."@Redfish.ActionInfo"
+                $response = Invoke-WebRequest -Uri $url_actioninfo -Headers $JsonHeader -Method Get -UseBasicParsing
+                $converted_object = $response.Content | ConvertFrom-Json
+                foreach($parameter in $converted_object."Parameters")
+                {
+                    if($parameter."Name" -eq "ResetType")
+                    {
+                        $reset_types["ResetType@Redfish.AllowableValues"] = $parameter."AllowableValues"
+                    }
+                }
+            }
             # Output result
             ConvertOutputHashTableToObject $reset_types
         }
