@@ -155,7 +155,7 @@ function lenovo_create_bmc_user
             $role_name = "CustomRole" + $url_dest.Split("/")[-1]
         }
         $links_role = @{}
-        if("CustomRole"  -in $role_name)
+        if($role_name -match "CustomRole")
         {
             $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
             if($result -ne $True)
@@ -175,7 +175,7 @@ function lenovo_create_bmc_user
             $JsonHeader = @{ "If-Match" = $converted_object.'@odata.etag'
             "X-Auth-Token" = $session_key
             }
-            if($links_role)
+            if($links_role.keys -contains "Role")
             {
                 $JsonBody = @{ "Password"=$newuserpassword
                     "UserName"=$newusername
@@ -198,7 +198,7 @@ function lenovo_create_bmc_user
             "X-Auth-Token" = $session_key
                 }
 
-            if($links_role)
+            if($links_role.keys -contains "Role")
             {
                 $JsonBody = @{ "Password"=$newuserpassword
                     "UserName"=$newusername
