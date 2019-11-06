@@ -32,11 +32,11 @@ function create_session
    #>
     param(
         [Parameter(Mandatory=$True)]
-        [string]$ip="",
+        [string] $ip = '',
         [Parameter(Mandatory=$True)]
-        [string]$username="",
+        [string] $username= '',
         [Parameter(Mandatory=$True)]
-        [string]$password=""
+        [string] $password = ''
         )
 
     # Ignore SSL Certificates
@@ -154,11 +154,11 @@ function get_system_urls
 
     param(
         [Parameter(Mandatory=$True)]
-        [string]$bmcip="",
+        [string] $bmcip = '',
         [Parameter(Mandatory=$True)]
         $session,
         [Parameter(Mandatory=$False)]
-        [string]$system_id="None"
+        [string] $system_id = "None"
         )
     
     # Create an null array for result return
@@ -227,7 +227,7 @@ function read_config
    
     param(
         [Parameter(Mandatory=$False)]
-        [string]$config_file='config.ini'
+        [string] $config_file = 'config.ini'
         )
     
     $hash_table = @{'BmcIp'=''; 'BmcUsername'=''; 'BmcUserpassword'=''; 'SystemId'=''; 'ManagerId'=''; 'ChassisId'=''}

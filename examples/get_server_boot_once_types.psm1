@@ -42,13 +42,13 @@ function get_server_boot_once_types
    
     param(
         [Parameter(Mandatory=$False)]
-        [string] $ip="",
+        [string] $ip= '',
         [Parameter(Mandatory=$False)]
-        [string] $username="",
+        [string] $username = '',
         [Parameter(Mandatory=$False)]
-        [string]$password="",
+        [string] $password = '',
         [Parameter(Mandatory=$False)]
-        [string] $system_id="None",
+        [string] $system_id = "None",
         [Parameter(Mandatory=$False)]
         [string] $config_file = 'config.ini'
         )
