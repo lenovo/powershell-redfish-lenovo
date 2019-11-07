@@ -32,11 +32,14 @@ function create_session
    #>
     param(
         [Parameter(Mandatory=$True)]
-        [string] $ip = '',
+        [ValidateNotNullOrEmpty()]
+        [string] $ip,
         [Parameter(Mandatory=$True)]
-        [string] $username= '',
+        [ValidateNotNullOrEmpty()]
+        [string] $username,
         [Parameter(Mandatory=$True)]
-        [string] $password = ''
+        [ValidateNotNullOrEmpty()]
+        [string] $password
         )
 
     # Ignore SSL Certificates
@@ -87,7 +90,7 @@ function create_session
     $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
     $session_server_url_string = "https://$ip"+$hash_table.SessionService.'@odata.id'
 
-    # Get session creation url from SessionService 
+    # Get session creation url from SessionService
     $response = Invoke-WebRequest -Uri $session_server_url_string -Method Get -Credential $bmc_credential -UseBasicParsing
     $converted_object = $response.Content | ConvertFrom-Json
     $hash_table = @{}
@@ -101,7 +104,7 @@ function create_session
     # Create session and acquire session info
     $response = Invoke-WebRequest -Uri $session_url_string -Method Post -Body $JsonBody -ContentType 'application/json'
 
-    $session = New-Object PSObject  
+    $session = New-Object PSObject
     $session|Add-Member -MemberType NoteProperty 'X-Auth-Token' $response.headers.'X-Auth-Token'
     $session|Add-Member -MemberType NoteProperty 'Location' $response.headers.Location
 
@@ -120,8 +123,10 @@ function delete_session
    #>
     param(
         [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
         $ip,
         [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
         $session
         )
 
@@ -154,8 +159,10 @@ function get_system_urls
 
     param(
         [Parameter(Mandatory=$True)]
-        [string] $bmcip = '',
+        [ValidateNotNullOrEmpty()]
+        [string] $bmcip,
         [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
         $session,
         [Parameter(Mandatory=$False)]
         [string] $system_id = "None"
