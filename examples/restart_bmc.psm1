@@ -136,7 +136,22 @@ function restart_bmc
             $temp = $hash_table."Actions"."#Manager.Reset"."target"
             $uri_restart_manager = "https://$ip"+$temp
 
-            if($hash_table."Actions"."#Manager.Reset"."ResetType@Redfish.AllowableValues")
+            $body = @{}
+            if($converted_object.Actions."#Manager.Reset".'@Redfish.ActionInfo')
+            {
+                $url_actioninfo = "https://$ip"+$converted_object.Actions."#Manager.Reset".'@Redfish.ActionInfo'
+                $response = Invoke-WebRequest -Uri $url_actioninfo -Headers $JsonHeader -Method Get -UseBasicParsing
+                $converted_object = $response.Content | ConvertFrom-Json
+                foreach($parameter in $converted_object."Parameters")
+                {
+                    if($parameter."Name" -and $parameter."AllowableValues")
+                    {
+                        $values = $parameter."AllowableValues"
+                        $body = @{$parameter."Name"=$values[0]}
+                    }
+                }
+                $JsonBody = $body | ConvertTo-Json -Compress
+            }elseif($hash_table."Actions"."#Manager.Reset"."ResetType@Redfish.AllowableValues")
             {
                 $JsonBody = @{ "ResetType" = "GracefulRestart"
                     } | ConvertTo-Json -Compress

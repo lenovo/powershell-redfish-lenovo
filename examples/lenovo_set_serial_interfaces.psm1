@@ -134,6 +134,10 @@ function lenovo_set_serial_interfaces
             # Get service data uri from the Manager resource instance
             $uri_address_manager = "https://$ip" + $manager_url_string
 
+            # Build headers with sesison key for authentication
+            $JsonHeader = @{ "X-Auth-Token" = $session_key
+            }
+
             # Get the serial interfaces url
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
@@ -195,7 +199,29 @@ function lenovo_set_serial_interfaces
             $converted_object = $response.Content | ConvertFrom-Json
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-
+            
+            # check whether the specified interface is valid
+            if($hash_table.keys -notcontains "BitRate")
+            {
+                Write-Host
+                [String]::Format("The specified Interface Id {0} has no BitRate property, not valid.", $interfaceid)
+                return $False
+            }
+            # get etag to set If-Match precondition in header
+            if($converted_object."@odata.etag" -ne $null)
+            {
+                $JsonHeader = @{ "If-Match" = $converted_object."@odata.etag"
+                            "X-Auth-Token" = $session_key
+                }
+            }
+            else
+            {
+                $JsonHeader = @{ "If-Match" = ""
+                            "X-Auth-Token" = $session_key
+                }
+            }
+            
+            # Build Oem part in body
             $lenovo = @{}
             if($hash_table.keys -contains "Oem")
             {

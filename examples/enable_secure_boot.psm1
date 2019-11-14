@@ -97,20 +97,46 @@ function enable_secure_boot
         # Loop all System resource instance in $system_url_collection
         foreach($system_url_string in $system_url_collection)
         {
+            # Build headers with sesison key for authentication
+            $JsonHeader = @{ "X-Auth-Token" = $session_key
+            }
+
             # Get system resource
             $system_url_string = "https://$ip" + $system_url_string
             $response = Invoke-WebRequest -Uri $system_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
 
-            # Set SecureBootEnable True
+            # get secureboot url
             $secureboot_url = "https://$ip" +  $converted_object."SecureBoot"."@odata.id"
+            
+            $response = Invoke-WebRequest -Uri $secureboot_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+
+            # get etag to set If-Match precondition
+            if($converted_object."@odata.etag" -ne $null)
+            {
+                $JsonHeader = @{ "If-Match" = $converted_object."@odata.etag"
+                            "X-Auth-Token" = $session_key
+                }
+            }
+            else
+            {
+                $JsonHeader = @{ "If-Match" = ""
+                            "X-Auth-Token" = $session_key
+                }
+            }
+            
+            # Set SecureBootEnable True in body
             $JsonBody = @{"SecureBootEnable" = $True} | ConvertTo-Json -Compress
+
+            # perform patch
             $response = Invoke-WebRequest -Uri $secureboot_url -Headers $JsonHeader -Method Patch -Body $JsonBody -ContentType 'application/json'
         }
 
         # Return result
-        $ret = @{ret = "True";msg = "PATCH command successfully completed for enable secure boot"}
-        $ret
+        Write-Host
+            [String]::Format("- PASS, statuscode {0} returned successfully for enable secure boot",$response.StatusCode)
+        return $True
     }
     catch
     {

@@ -101,7 +101,27 @@ function set_server_boot_once
         {
             # Get system url from the system url collection
             $uri_address_system = "https://$ip"+$system_url_string
-            
+
+            # Build headers with sesison key for authentication
+            $JsonHeader = @{ "X-Auth-Token" = $session_key
+            }
+
+            # get etag to set If-Match precondition
+            $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            if($converted_object."@odata.etag" -ne $null)
+            {
+                $JsonHeader = @{ "If-Match" = $converted_object."@odata.etag"
+                            "X-Auth-Token" = $session_key
+                }
+            }
+            else
+            {
+                $JsonHeader = @{ "If-Match" = ""
+                            "X-Auth-Token" = $session_key
+                }
+            }
+
             # Prepare PATCH Body to set Boot once to the user specified target
             $patch_body = @{"BootSourceOverrideEnabled"="Once"; "BootSourceOverrideTarget"=$boot_source}
             $body = @{"Boot"=$patch_body}

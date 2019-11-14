@@ -122,8 +122,22 @@ function get_bios_bootmode
                 $attribute_name = "SystemBootMode"
             }
             else
-            {
-                $attribute_name = "BootModes_SystemBootMode"
+            {   
+                $hash_table2 = @{}
+                $value = $converted_object.Attributes
+                $value.psobject.properties | Foreach { $hash_table2[$_.Name] = $_.Value }
+                foreach($attr in $hash_table2.Keys)
+                {
+                    if($attr -match "Boot Mode")
+                    {
+                        $attribute_name = $attr
+                        break
+                    }
+                }
+                if (-not $attribute_name)
+                {
+                    $attribute_name = "BootModes_SystemBootMode"
+                }
             }
 
             $boot_mode_dict["BootMode"] = $hash_table.Attributes.$attribute_name
