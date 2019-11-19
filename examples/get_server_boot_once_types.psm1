@@ -42,13 +42,13 @@ function get_server_boot_once_types
 
    param(
         [Parameter(Mandatory=$False)]
-        [string] $ip= '',
+        [string] $ip = '',
         [Parameter(Mandatory=$False)]
         [string] $username = '',
         [Parameter(Mandatory=$False)]
         [string] $password = '',
         [Parameter(Mandatory=$False)]
-        [string] $system_id = "None",
+        [string] $system_id = 'None',
         [Parameter(Mandatory=$False)]
         [string] $config_file = 'config.ini'
         )
@@ -138,7 +138,7 @@ function get_server_boot_once_types
     # Delete existing session whether script exit successfully or not
     finally
     {
-        if ($session_key -ne '')
+        if (-not [string]::IsNullOrWhiteSpace($session_key))
         {
             delete_session -ip $ip -session $session
         }
