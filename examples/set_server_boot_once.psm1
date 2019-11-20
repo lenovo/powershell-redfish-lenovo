@@ -38,26 +38,27 @@ function set_server_boot_once
     - password: Pass in BMC username password
     - system_id: Pass in ComputerSystem instance id(None: first instance, all: all instaces)
     - config_file: Pass in configuration file path, default configuration file is config.ini
-    - boot_source: Input the set server boot order("None", "Pxe", "Cd", "Usb", "Hdd", "BiosSetup", "Diags")
+    - boot_source: Input the set server boot order("None", "Pxe", "Cd", "Usb", "Hdd", "BiosSetup", "Diags", "UefiTarget")
    .EXAMPLE
     set_server_boot_once -ip 10.10.10.10 -username USERID -password PASSW0RD -boot_source Cd
    #>
    
     param(
         [Parameter(Mandatory=$False)]
-        [string]$ip="",
+        [string] $ip = '',
         [Parameter(Mandatory=$False)]
-        [string]$username="",
+        [string] $username = '',
         [Parameter(Mandatory=$False)]
-        [string]$password="",
+        [string] $password = '',
         [Parameter(Mandatory=$False)]
-        [string]$system_id="None",
+        [string] $system_id = 'None',
         [Parameter(Mandatory=$False)]
-        [string]$config_file="config.ini",
-        [Parameter(Mandatory=$True, HelpMessage='Input the set server boot("None", "Pxe", "Cd", "Usb", "Hdd", "BiosSetup", "Diags")')]
-        [string]$boot_source
+        [string] $config_file = 'config.ini',
+        [Parameter(Mandatory=$True, HelpMessage='Input the set server boot("None", "Pxe", "Cd", "Usb", "Hdd", "BiosSetup", "Diags", "UefiTarget")')]
+        [ValidateSet('None', 'Pxe', 'Cd', 'Usb', 'Hdd', 'BiosSetup', 'Diags', 'UefiTarget')]
+        [string] $boot_source
         )
-        
+
     # Get configuration info from config file
     $ht_config_ini_info = read_config -config_file $config_file
 
@@ -81,20 +82,18 @@ function set_server_boot_once
 
     try
     {
-        $session_key = ""
-        $session_location = ""
-        
+        $session_key = $session_location = ''
+
         # Create session
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
 
         # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 'X-Auth-Token' = $session_key}
 
         # Get the system url collection
-        $system_url_collection = @()
-        $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
+        $system_url_collection = @(get_system_urls -bmcip $ip -session $session -system_id $system_id)
 
         # Loop all System resource instance in $system_url_collection
         foreach ($system_url_string in $system_url_collection)
@@ -128,7 +127,7 @@ function set_server_boot_once
             $json_body = $body | convertto-json
             try
             {
-                $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Patch  -Body $json_body -ContentType 'application/json'
+                $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Patch -Body $json_body -ContentType 'application/json'
             }
             catch
             {
@@ -142,10 +141,10 @@ function set_server_boot_once
                         $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
                         Write-Host "Error message:" $response_j.Resolution
                     }
-                    $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing 
+                    $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
                     $converted_object = $response.Content | ConvertFrom-Json
                     $hash_table = @{}
-                    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
                     $allowable_values_list = $hash_table.Boot.'BootSourceOverrideTarget@Redfish.AllowableValues'
                     $allowable_values_string = [string]$allowable_values_list
                     $boot_source_string = ($allowable_values_string.Replace(" ",","))
@@ -193,7 +192,7 @@ function set_server_boot_once
     # Delete existing session whether script exit successfully or not
     finally
     {
-        if ($session_key -ne "")
+        if (-not [string]::IsNullOrWhiteSpace($session_key))
         {
             delete_session -ip $ip -session $session
         }

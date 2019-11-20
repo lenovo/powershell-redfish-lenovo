@@ -44,13 +44,13 @@ function clear_system_log
    
     param(
         [Parameter(Mandatory=$False)]
-        [string]$ip="",
+        [string] $ip = '',
         [Parameter(Mandatory=$False)]
-        [string]$username="",
+        [string] $username = '',
         [Parameter(Mandatory=$False)]
-        [string]$password="",
+        [string] $password = '',
         [Parameter(Mandatory=$False)]
-        [string]$config_file="config.ini"
+        [string] $config_file = 'config.ini'
         )
         
     # Get configuration info from config file
@@ -72,8 +72,7 @@ function clear_system_log
 
     try
     {
-        $session_key = ""
-        $session_location = ""
+        $session_key = $session_location = ''
         
         # Create session
         $session = create_session -ip $ip -username $username -password $password
@@ -81,24 +80,23 @@ function clear_system_log
         $session_location = $session.Location
 
         # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 'X-Auth-Token' = $session_key}
 
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
 
-        
         $managers_url = $converted_object.Managers."@odata.id"
         $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
+        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
 
         $manager_url_collection = @()
-       
+
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
         $hash_table = @{}
-        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-        
+        $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
+
         # Set the $manager_url_collection
         foreach ($i in $hash_table.Members)
         {
@@ -115,14 +113,14 @@ function clear_system_log
             $response_manager_uri = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response_manager_uri.Content | ConvertFrom-Json
             $hash_table = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
             $log_services_url_string = "https://$ip" + $hash_table.LogServices.'@odata.id'
 
             # Get the response log server resource
             $response_log_services_url = Invoke-WebRequest -Uri $log_services_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response_log_services_url.Content | ConvertFrom-Json
             $hash_table1 = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table1[$_.Name] = $_.Value }
+            $converted_object.psobject.properties | ForEach-Object { $hash_table1[$_.Name] = $_.Value }
 
             foreach ($i in $hash_table1.Members)
             {
@@ -131,7 +129,7 @@ function clear_system_log
                 $response_log_uri_address = Invoke-WebRequest -Uri $log_uri_address_string -Headers $JsonHeader -Method Get -UseBasicParsing
                 $converted_object = $response_log_uri_address.Content | ConvertFrom-Json
                 $hash_table2 = @{}
-                $converted_object.psobject.properties | Foreach { $hash_table2[$_.Name] = $_.Value }
+                $converted_object.psobject.properties | ForEach-Object { $hash_table2[$_.Name] = $_.Value }
 
                 # Get the clear system log url
                 if($hash_table2.Keys -contains "Actions")
@@ -228,10 +226,9 @@ function clear_system_log
     # Delete existing session whether script exit successfully or not
     finally
     {
-        if ($session_key -ne "")
+        if (-not [string]::IsNullOrWhiteSpace($session_key))
         {
             delete_session -ip $ip -session $session
         }
     }
 }
-  
