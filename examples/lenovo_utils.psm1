@@ -252,3 +252,29 @@ function read_config
     
     return $hash_table
 }
+
+function handle_exception
+{
+    param(
+        [Parameter(Mandatory=$True)]
+        [object]$arg_object
+        )
+
+    # Handle HTTP exception response
+    if($arg_object.Exception.Response)
+    {
+        Write-Host
+        [String]::Format("Error occured, error code:{0}",$arg_object.Exception.Response.StatusCode.Value__)
+        $sr = new-object System.IO.StreamReader $arg_object.Exception.Response.GetResponseStream()
+        $resobject = $sr.ReadToEnd() | ConvertFrom-Json
+        $ret = $resobject.error.('@Message.ExtendedInfo')
+    }
+    # Handle system exception response
+    elseif($_.Exception)
+    {
+        $ret =  "Error message:" + $_.Exception.Message + ", Please check arguments or server status."
+    }
+
+    return $ret
+    
+}

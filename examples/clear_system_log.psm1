@@ -27,7 +27,7 @@
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
 
-function lenovo_clear_system_log
+function clear_system_log
 {
    <#
    .Synopsis

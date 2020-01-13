@@ -1,6 +1,6 @@
 ###
 #
-# Lenovo Redfish examples - Reset BIOS Default
+# Lenovo Redfish examples - Get the current BMC user global
 #
 # Copyright Notice:
 #
@@ -25,21 +25,19 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-
-function reset_bios_default{
+function lenovo_get_bmc_user_global
+{
    <#
    .Synopsis
-    Cmdlet used to reset BIOS default values
+    Cmdlet used to get bmc user global
    .DESCRIPTION
-    Cmdlet used to reset BIOS default values using Redfish API
-    Connection information can be specified via command parameter or configuration file
+    Cmdlet used to get bmc user global from BMC using Redfish API. BMC user info will be printed to the screen. Connection information can be specified via command parameter or configuration file.
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
-    - system_id: Pass in System resource instance id(none: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    reset_bios_default -ip 10.10.10.10 -username USERID -password PASSW0RD
+    lenovo_get_bmc_user_accounts -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
@@ -50,16 +48,18 @@ function reset_bios_default{
         [Parameter(Mandatory=$False)]
         [string]$password="",
         [Parameter(Mandatory=$False)]
-        [string]$system_id="None",
-        [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
         )
-        
 
-    # get configuration info from config file
+        $OemArgs = @("PasswordChangeOnNextLogin", "AuthenticationMethod",
+        "MinimumPasswordChangeIntervalHours", "PasswordExpirationPeriodDays",
+        "PasswordChangeOnFirstAccess", "MinimumPasswordReuseCycle",
+        "PasswordLength", "WebInactivitySessionTimeout", "PasswordExpirationWarningPeriod")
+        
+    # Get configuration info from config file
     $ht_config_ini_info = read_config -config_file $config_file
-    
-    # if the parameter is not specified via command line, use the setting from configuration file
+
+    # If the parameter is not specified via command line, use the setting from configuration file
     if ($ip -eq "")
     {
         $ip = [string]($ht_config_ini_info['BmcIp'])
@@ -72,67 +72,54 @@ function reset_bios_default{
     {
         $password = [string]($ht_config_ini_info['BmcUserpassword'])
     }
-    if ($system_id -eq "")
-    {
-        $system_id = [string]($ht_config_ini_info['SystemId'])
-    }
-    
+
 
     try
     {
         $session_key = ""
         $session_location = ""
-        # create session
+
+        $base_url = "https://$ip/redfish/v1/"
+        # Create session
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
+        $JsonHeader = @{"X-Auth-Token" = $session_key}
 
-        #build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
-        }
+        # Get the account server url via Invoke-WebRequest
+        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+
+        # Convert response content to hash table
+        $converted_object = $response.Content | ConvertFrom-Json
+        $hash_table = @{}
+        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+        $account_server_url_string = "https://$ip"+$hash_table.AccountService.'@odata.id'
+
+        # Get the accounts url via Invoke-WebRequest
+        $response_account_server = Invoke-WebRequest -Uri $account_server_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+
+        # Convert response_account_server content to hash table
+        $converted_object = $response_account_server.Content | ConvertFrom-Json
+        $hash_table = @{}
+        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
         
-        # get the system url collection
-        $system_url_collection = @()
-        $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
-
-        # loop all System resource instance in $system_url_collection
-        foreach ($system_url_string in $system_url_collection)
+        $ht_userglobal = @{}
+        $ht_userglobal['AccountLockoutThreshold'] = $converted_object.AccountLockoutThreshold
+        $ht_userglobal['AccountLockoutDuration'] = $converted_object.AccountLockoutThreshold
+        foreach($item_name in $OemArgs)
         {
-            
-            # get Bios from the System resource instance
-            $uri_address_system = "https://$ip"+$system_url_string
-            
-            $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
-            
-            $converted_object = $response.Content | ConvertFrom-Json
-            $hash_table = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-
-            
-            $temp = [string]$hash_table.BIOS
-            $uri_address_bios = "https://$ip"+($temp.Split("=")[1].Replace("}",""))
-
-            $response = Invoke-WebRequest -Uri $uri_address_Bios -Headers $JsonHeader -Method Get -UseBasicParsing
-
-            $converted_object = $response.Content | ConvertFrom-Json
-            $hash_table = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-
-            # Reset Bios default value for the System resource instance
-            $temp = $hash_table."Actions"."#Bios.ResetBios"."target"
-            $uri_reset_bios_default = "https://$ip"+ $temp
-            $JsonBody = @{}|ConvertTo-Json -Compress
-            
-            $response = Invoke-WebRequest -Uri $uri_reset_bios_default -Headers $JsonHeader -Body $JsonBody -Method Post -ContentType 'application/json'            
-
-            Write-Host
-            [String]::Format("- PASS, statuscode {0} returned successfully to reset bios default.",$response.StatusCode)
-
-            return $True
+            if ($null -ne $converted_object.Oem.Lenovo.$item_name)
+            {
+                $ht_userglobal[$item_name] = $converted_object.Oem.Lenovo.$item_name
+            }
         }
+
+        $ht_userglobal
+
     }
     catch
     {
+        # Handle http exception response
         if($_.Exception.Response)
         {
             Write-Host "Error occured, error code:" $_.Exception.Response.StatusCode.Value__
@@ -140,13 +127,14 @@ function reset_bios_default{
             {
                 Write-Host "Error message: You are required to log on Web Server with valid credentials first."
             }
-            if ($_.ErrorDetails.Message)
+            elseif ($_.ErrorDetails.Message)
             {
                 $response_j = $_.ErrorDetails.Message | ConvertFrom-Json | Select-Object -Expand error
                 $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
                 Write-Host "Error message:" $response_j.Resolution
             }
-        } 
+        }
+        # Handle system exception response
         elseif($_.Exception)
         {
             Write-Host "Error message:" $_.Exception.Message
@@ -163,3 +151,4 @@ function reset_bios_default{
         }
     }
 }
+    

@@ -1,6 +1,6 @@
 ﻿###
 #
-# Lenovo Redfish examples - Bmc config restore
+# Lenovo Redfish examples - Get the power metrics information
 #
 # Copyright Notice:
 #
@@ -25,29 +25,23 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function lenovo_bmc_config_restore
+function get_power_metrics
 {
     <#
    .Synopsis
-    Cmdlet used to Bmc config restore
+    Cmdlet used to get power metrics
    .DESCRIPTION
-    Cmdlet used to Get power limit from BMC using Redfish API. Information will be printed to the screen. Connection information can be specified via command parameter or configuration file.
+    Cmdlet used to get power metrics from BMC using Redfish API. Connection information can be specified via command parameter or configuration file.
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
     - system_id:Pass in ComputerSystem instance id(None: first instance, all: all instances)
-    - backuppasswd:Pass in the password that you specified when the configuration was exported.
-    - backupfile:Pass in external file that contains the configuration you wish to restore
     - config_file: Pass in configuration file path, default configuration file is config.ini
-   .EXAMPLErestore
-    lenovo_bmc_config_restore -ip 10.10.10.10 -username USERID -password PASSW0RD -backupfile ./bmc_config_backup.json -backuppasswd 123456789
+   .EXAMPLE
+    get_pci_inventory -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
-        [Parameter(Mandatory=$False)]
-        [string]$backupfile="./bmc_config_backup.json",
-        [Parameter(Mandatory=$True)]
-        [string]$backuppasswd,
         [Parameter(Mandatory=$False)]
         [string]$ip="",
         [Parameter(Mandatory=$False)]
@@ -81,21 +75,6 @@ function lenovo_bmc_config_restore
     {
         $system_id = [string]($ht_config_ini_info['SystemId'])
     }
-    #check file path
-    if(Test-Path $backupfile)
-    {
-        $size = getDocSize -backupfile $backupfile
-        if([double]$size -gt 255)
-        {
-            Write-Host "Failed to restore the configuration because the size of configuration data is over 255KB."
-            return $False
-        }
-    }
-    else
-    {
-        Write-Host "backfile is not existed,please check your input"
-        return $False
-    }
 
     try
     {
@@ -111,66 +90,54 @@ function lenovo_bmc_config_restore
         $JsonHeader = @{ "X-Auth-Token" = $session_key
         }
         
-        # Get the manager url
+        # Get the chassis url
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
-        $managers_url = $converted_object.Managers."@odata.id"
+        $chassis_url = $converted_object.Chassis."@odata.id"
 
-        #Get manager list 
-        $manager_url_collection = @()
-        $managers_url_string = "https://$ip"+ $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+        #Get chassis list 
+        $chassis_url_collection = @()
+        $chassis_url_string = "https://$ip"+ $chassis_url
+        $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
         foreach($i in $converted_object.Members)
         {
-               $tmp_manager_url_string = "https://$ip" + $i."@odata.id"
-               $manager_url_collection += $tmp_manager_url_string
+               $tmp_chassis_url_string = "https://$ip" + $i."@odata.id"
+               $chassis_url_collection += $tmp_chassis_url_string
         }
-        
-        # Loop all manager resource instance in $manager_url_collection
-        foreach($manager_url_string in $manager_url_collection)
+
+        # Loop all System resource instance in $chassis_url_collection
+        foreach($chassis_url_string in $chassis_url_collection)
         {
-            #get manager resource
-            $response = Invoke-WebRequest -Uri $manager_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+            # Get system resource
+            $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
 
-            #Get config url
-            $oem_info = $converted_object.Oem.Lenovo
-            $config_url = "https://$ip" + $oem_info.Configuration."@odata.id"
+            # Get Power resource 
+            $power_url = "https://$ip" + $converted_object.Power."@odata.id"
+            $response = Invoke-WebRequest -Uri $power_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_power_object = $response.Content | ConvertFrom-Json
+
+            # Get PowerControl count
+            $powercontrol_x_count =$converted_power_object."PowerControl@odata.count"
+
+            # Loop all pci resource instance in EthernetInterfaces resource
+            for($i = 0;$i -lt $powercontrol_x_count;$i ++)
+            {
+                # $converted_power_object.PowerControl[$i]
+                $ht_powercontrol = @{}
+
+                $ht_powercontrol["MemberId"] = $converted_power_object.PowerControl[$i]."MemberId"
+                $ht_powercontrol["Name"] = $converted_power_object.PowerControl[$i]."Name"
+                $ht_powercontrol["PowerMetrics"] = $converted_power_object.PowerControl[$i]."PowerMetrics"
+
+                # Retrun result
+                $ht_powercontrol
+                Write-Host " "
+            }
             
-            #Get restore action url
-            $response = Invoke-WebRequest -Uri $config_url -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-            $action_restore_url = "https://$ip" + $converted_object.Actions."#LenovoConfigurationService.RestoreConfiguration".target
-
-            #restore config
-            $list = ""
-            try
-            {
-                $backinfo = Get-Content $backupfile | Out-String | ConvertFrom-Json
-            }
-            catch
-            {
-                Write-Host "read backupfile failed,please check file status"
-                return $False
-            }
-            foreach($i in $backinfo)
-            {
-                $list += $i
-            }
-
-            $JsonBody = @{"Passphrase"=$backuppasswd
-                          "ConfigContent" = $list}|ConvertTo-Json -Compress
-            
-            $JsonBody
-
-            $response = Invoke-WebRequest -Uri $action_restore_url -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-            Write-Host
-            [String]::Format("- PASS, statuscode {0} returned successfully to restore config",$response.StatusCode)
-            return $True
-        }
-        
+        }  
     }
     catch
     {
@@ -187,6 +154,12 @@ function lenovo_bmc_config_restore
                 $response_j = $_.ErrorDetails.Message | ConvertFrom-Json | Select-Object -Expand error
                 $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
                 Write-Host "Error message:" $response_j.Resolution
+            }
+            else 
+            {
+                $sr = new-object System.IO.StreamReader $_.Exception.Response.GetResponseStream()
+                $resobject = $sr.ReadToEnd() | ConvertFrom-Json
+                $resobject.error.('@Message.ExtendedInfo')    
             }
         }
         # Handle system exception response
@@ -205,17 +178,4 @@ function lenovo_bmc_config_restore
             delete_session -ip $ip -session $session
         }
     }
-    
-}
-
-#get file size
-function getDocSize
-{
-    param(
-        [Parameter(Mandatory=$True)]
-        [string]$backupfile
-        )
-    $Item = Get-Item $backupfile|select Length
-    $size = $Item.Length/1KB
-    return $size
 }

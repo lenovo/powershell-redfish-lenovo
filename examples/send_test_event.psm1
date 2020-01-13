@@ -108,7 +108,6 @@ function send_test_event
         $send_event_url = "https://$ip" + $converted_object.Actions."#EventService.SubmitTestEvent".target
         $timestamp = Get-Date -Format 'yyyy-MM-ddTHH:mm:ss+08:00'
         $JsonBody = @{"EventId"=$eventid
-                      "EventType" = "Alert"
                       "EventTimestamp" = $timestamp
                       "Message" = $message
                       "MessageArgs" = @()

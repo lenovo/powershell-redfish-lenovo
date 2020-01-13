@@ -55,7 +55,7 @@ function set_bmc_ntp
         [string]$config_file="config.ini",
         [Parameter(Mandatory=$True, HelpMessage="Input the ntp server(array  Items: string,Item count: 4)")]
         [array]$ntp_server,
-        [Parameter(Mandatory=$True, HelpMessage="Input the rotocolEnabled (0:false, 1:true)")]
+        [Parameter(Mandatory=$True, HelpMessage="Input the ProtocolEnabled (0:false, 1:true)")]
         [int]$enabled
     )
         
