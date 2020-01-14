@@ -203,7 +203,10 @@ function lenovo_mount_virtual_media
             {
                 $fsport = ":" + $fsport
             }
-            $fsdir = "/" + $fsdir.Trim("/")
+            if($fsdir -ne "")
+            {
+                $fsdir = "/" + $fsdir.Trim("/")
+            }
             $fsprotocol = $fsprotocol.ToLower()
 
             if($fsprotocol -eq "samba")
