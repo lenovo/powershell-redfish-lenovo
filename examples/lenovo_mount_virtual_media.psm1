@@ -138,26 +138,35 @@ function lenovo_mount_virtual_media
     
     try
     {
-        $session_key = ""
-        $session_location = ""
-        
-        # Create session
-        $session = create_session -ip $ip -username $username -password $password
-        $session_key = $session.'X-Auth-Token'
-        $session_location = $session.Location
+        Ignore_SSLCertificates
 
-        $JsonHeader = @{"X-Auth-Token" = $session_key}
+        # Set BMC access credential
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::TLS12
+        $bmc_username = $username
+        $bmc_password = $password
+        $bmc_password_secure = ConvertTo-SecureString $bmc_password -AsPlainText -Force
+        $bmc_credential = New-Object System.Management.Automation.PSCredential($bmc_username, $bmc_password_secure)
+
+        # $session_key = ""
+        # $session_location = ""
+        
+        # # Create session
+        # $session = create_session -ip $ip -username $username -password $password
+        # $session_key = $session.'X-Auth-Token'
+        # $session_location = $session.Location
+
+        # $JsonHeader = @{"X-Auth-Token" = $session_key}
     
         # Get the manager url collection
         $manager_url_collection = @()
         $base_url = "https://$ip/redfish/v1/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $response = Invoke-WebRequest -Uri $base_url -Credential $bmc_credential -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
 
         
         $managers_url = $converted_object.Managers."@odata.id"
         $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
+        $response = Invoke-WebRequest -Uri $managers_url_string -Credential $bmc_credential -Method Get -UseBasicParsing  
     
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
@@ -180,7 +189,7 @@ function lenovo_mount_virtual_media
             $uri_address_manager = "https://$ip" + $manager_url_string
 
             # Get the virtual media url
-            $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
+            $response = Invoke-WebRequest -Uri $uri_address_manager -Credential $bmc_credential -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
 
@@ -188,7 +197,7 @@ function lenovo_mount_virtual_media
             $uri_remote_control ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteControl"."@odata.id"
 
             # Get the virtual media response resource
-            $response = Invoke-WebRequest -Uri $uri_virtual_media -Headers $JsonHeader -Method Get -UseBasicParsing
+            $response = Invoke-WebRequest -Uri $uri_virtual_media -Credential $bmc_credential -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
@@ -230,7 +239,7 @@ function lenovo_mount_virtual_media
                         {
                             $virtual_media_x_url = "https://$ip" + $i."@odata.id"
                             # Get the virtual media response resource
-                            $response = Invoke-WebRequest -Uri $virtual_media_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                            $response = Invoke-WebRequest -Uri $virtual_media_x_url -Credential $bmc_credential -Method Get -UseBasicParsing
                             $converted_object = $response.Content | ConvertFrom-Json
                             $hash_table = @{}
                             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
@@ -255,7 +264,7 @@ function lenovo_mount_virtual_media
                                     $json_body = $body | convertto-json
 
                                     $virtual_media_member_uri = "https://$ip" + $hash_table."@odata.id"
-                                    $response = Invoke-WebRequest -Uri $virtual_media_member_uri -Headers $JsonHeader -Method Patch -Body $json_body -ContentType 'application/json'
+                                    $response = Invoke-WebRequest -Uri $virtual_media_member_uri -Credential $bmc_credential -Method Patch -Body $json_body -ContentType 'application/json'
 
                                     Write-Host
                                     [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode) 
@@ -283,7 +292,7 @@ function lenovo_mount_virtual_media
                 {
                     # umount_virtual_from_network
                     # Get MountImages url from remote map resource instance
-                    $response = Invoke-WebRequest -Uri $uri_remote_map -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $response = Invoke-WebRequest -Uri $uri_remote_map -Credential $bmc_credential -Method Get -UseBasicParsing
                     $converted_object = $response.Content | ConvertFrom-Json
                     $hash_table = @{}
                     $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
@@ -318,12 +327,12 @@ function lenovo_mount_virtual_media
                     $body["Options"] = $options
                     $json_body = $body | convertto-json
 
-                    $response = Invoke-WebRequest -Uri $images_member_uri -Headers $JsonHeader -Method Post -Body $json_body -ContentType 'application/json'
+                    $response = Invoke-WebRequest -Uri $images_member_uri -Credential $bmc_credential -Method Post -Body $json_body -ContentType 'application/json'
                     Write-Host
                     [String]::Format("- PASS, statuscode {0} returned to add image member successful",$response.StatusCode)
                     
                     $mount_image_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteMapService.Mount"."target"
-                    $response = Invoke-WebRequest -Uri $mount_image_url -Headers $JsonHeader -Method Post -ContentType 'application/json'
+                    $response = Invoke-WebRequest -Uri $mount_image_url -Credential $bmc_credential -Method Post -ContentType 'application/json'
                     Write-Host
                     [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
                 }
@@ -332,13 +341,13 @@ function lenovo_mount_virtual_media
             {
                 # mount_virtual_media_from_rdoc
                 # Get MountImages url from remote map resource instance
-                $response = Invoke-WebRequest -Uri $uri_remote_control -Headers $JsonHeader -Method Get -UseBasicParsing
+                $response = Invoke-WebRequest -Uri $uri_remote_control -Credential $bmc_credential -Method Get -UseBasicParsing
                 $converted_object = $response.Content | ConvertFrom-Json
                 $hash_table = @{}
                 $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
                 $upload_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteControlService.UploadFromURL"."target"
 
-                if($fsprotocol == "samba")
+                if($fsprotocol -eq "samba")
                 {
                     $fsprotocol = "smb"
                 }
@@ -354,12 +363,12 @@ function lenovo_mount_virtual_media
                 }
                 $json_body = $body | convertto-json
 
-                $response = Invoke-WebRequest -Uri $upload_url -Headers $JsonHeader -Method Post -Body $json_body -ContentType 'application/json'
+                $response = Invoke-WebRequest -Uri $upload_url -Credential $bmc_credential -Method Post -Body $json_body -ContentType 'application/json'
                 Write-Host
                 [String]::Format("- PASS, statuscode {0} returned to upload media iso successful, next will mount media iso...",$response.StatusCode)
 
                 # Get MountImages url from remote map resource instance
-                $response = Invoke-WebRequest -Uri $uri_remote_map -Headers $JsonHeader -Method Get -UseBasicParsing
+                $response = Invoke-WebRequest -Uri $uri_remote_map -Credential $bmc_credential -Method Get -UseBasicParsing
                 $converted_object = $response.Content | ConvertFrom-Json
                 $hash_table = @{}
                 $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
@@ -367,7 +376,7 @@ function lenovo_mount_virtual_media
 
                 $body = @{""=""}
                 $json_body = $body | convertto-json
-                $response = Invoke-WebRequest -Uri $mount_image_url -Method Post -Headers $JsonHeader -Body $json_body -ContentType 'application/json'
+                $response = Invoke-WebRequest -Uri $mount_image_url -Method Post -Credential $bmc_credential -Body $json_body -ContentType 'application/json'
                 Write-Host
                 [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
 
@@ -406,11 +415,11 @@ function lenovo_mount_virtual_media
         return $False
     }
     # Delete existing session whether script exit successfully or not
-    finally
-    {
-        if ($session_key -ne "")
-        {
-            delete_session -ip $ip -session $session
-        }
-    }
+    # finally
+    # {
+    #     if ($session_key -ne "")
+    #     {
+    #         delete_session -ip $ip -session $session
+    #     }
+    # }
 }
