@@ -142,8 +142,8 @@ function get_fan_inventory
                     }
                     $ht_fans_info[$key] = $hash_table[$key]
                 }
-                $ht_fans_info
-                Write-Host " "
+                # Output result
+                ConvertOutputHashTableToObject $ht_fans_info
             }
             
         }

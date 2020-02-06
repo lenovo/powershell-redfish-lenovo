@@ -137,9 +137,8 @@ function get_system_inventory
             }
             $ht_system_info["EtherNetInterfaces"] = $list_ethernetinterface
            
-            # Return result
-            $ht_system_info
-            Write-Host ""  
+            # Output result
+            ConvertOutputHashTableToObject $ht_system_info
         }
     }
     catch

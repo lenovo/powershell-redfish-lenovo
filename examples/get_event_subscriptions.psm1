@@ -113,8 +113,8 @@ function get_event_subscriptions
                 }
                 $ht_subscription_info[$key] = $hash_table[$key]
             }
-            $ht_subscription_info
-            Write-Host ""
+            # Output result
+            ConvertOutputHashTableToObject $ht_subscription_info
         }
 
         return $True

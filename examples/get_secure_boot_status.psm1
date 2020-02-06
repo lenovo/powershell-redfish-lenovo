@@ -112,9 +112,8 @@ function get_secure_boot_status
             $ht_secure["SecureBootEnable"] = $converted_object.SecureBootEnable
             $ht_secure["SecureBootMode"] = $converted_object.SecureBootMode
             
-            # Return result
-            $ht_secure
-            Write-Host " "
+            # Output result
+            ConvertOutputHashTableToObject $ht_secure
         }   
     }
     catch

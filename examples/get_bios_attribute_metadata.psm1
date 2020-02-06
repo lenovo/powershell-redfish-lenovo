@@ -110,8 +110,7 @@ function get_bios_attribute_metadata
 
             # Return result 
             $ret = @{"Metadata_url" = $metadata_url}
-            $ret
-            write-host ""
+            ConvertOutputHashTableToObject $ret
         }
    }
    catch

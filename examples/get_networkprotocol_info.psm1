@@ -131,7 +131,8 @@ function get_network_protocol_info
                     $network_protocol[$key] = $hash_table.$key
                 }  
             }
-            $network_protocol
+            # Output result
+            ConvertOutputHashTableToObject $network_protocol
         }
     }    
     catch

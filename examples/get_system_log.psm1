@@ -145,6 +145,7 @@ function get_system_log
                 $converted_object = $sub_response.Content | ConvertFrom-Json
                 $hash_table2 = @{}
                 $converted_object.psobject.properties | Foreach { $hash_table2[$_.Name] = $_.Value }
+                # Output result
                 $hash_table2.Members
             }
         }

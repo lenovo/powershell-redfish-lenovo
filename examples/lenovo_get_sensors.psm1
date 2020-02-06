@@ -1,10 +1,10 @@
-﻿###
+###
 #
-# Lenovo Redfish examples - Get volt inventory
+# Lenovo Redfish examples - Get Sensors Information
 #
 # Copyright Notice:
 #
-# Copyright 2018 Lenovo Corporation
+# Copyright 2019 Lenovo Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -25,20 +25,19 @@
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function get_volt_inventory
+function lenovo_get_sensors
 {
     <#
    .Synopsis
-    Cmdlet used to Get volt inventory
+    Cmdlet used to get sensors information
    .DESCRIPTION
-    Cmdlet used to Get volt inventory from BMC using Redfish API. Information will be printed to the screen. Connection information can be specified via command parameter or configuration file.
+    Cmdlet used to get sensors information from BMC using Redfish API. Information will be printed to the screen. Connection information can be specified via command parameter or configuration file.
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
-    - system_id:Pass in ComputerSystem instance id(None: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    get_volt_inventory -ip 10.10.10.10 -username USERID -password PASSW0RD 
+    lenovo_get_sensors -ip 10.10.10.10 -username USERID -password PASSW0RD 
    #>
    
     param(
@@ -48,8 +47,6 @@ function get_volt_inventory
         [string]$username="",
         [Parameter(Mandatory=$False)]
         [string]$password="",
-        [Parameter(Mandatory=$False)]
-        [string]$system_id="None",
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
         )
@@ -70,10 +67,6 @@ function get_volt_inventory
     if ($password -eq "")
     {
         $password = [string]($ht_config_ini_info['BmcUserpassword'])
-    }
-    if ($system_id -eq "")
-    {
-        $system_id = [string]($ht_config_ini_info['SystemId'])
     }
 
     try
@@ -107,47 +100,47 @@ function get_volt_inventory
                $chassis_url_collection += $tmp_chassis_url_string
         }
         
+        # Define property list we want to get
+        $property_list = @('Description', 'EntityInstance', 'Id', 'Assertion',
+                      'RecordType', 'OwnerLUN', 'OwnerID', 'SensorNumber',
+                      'Name', 'State', 'SensorType', 'ReadingType',
+                      'BaseUnit', 'Reading', 'EntityID', 'SensorTypeNumber',
+                      'ThresholdLowerFatal', 'ThresholdLowerCritical', 'ThresholdLowerNonCritical', 'ThresholdUpperFatal',
+                      'ThresholdUpperCritical', 'ThresholdUpperNonCritical', 'UnitModifier')
+
         # Loop all chassis resource instance in $chassis_url_collection
         foreach($chassis_url_string in $chassis_url_collection)
         {
             #get chassis resource
             $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-            $links_info = $converted_object.Links
-            $ht_links = @{}
-            $links_info.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
-            if($ht_links.Keys -notcontains "ComputerSystems")
-            {
-                continue
-            }  
-
-            #Get powerl_url resource
-            $thermal_url = "https://$ip" + $converted_object.Power."@odata.id"
-            $response = Invoke-WebRequest -Uri $thermal_url -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-
-            #get power limit info
-            $list_voltages_info = $converted_object.Voltages
-            foreach($voltage_info in $list_voltages_info)
-            {
-                $hash_table = @{}
-                $voltage_info.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                $ht_voltage_info = @{}
-                foreach($key in $hash_table.Keys)
-                {
-                    if($key -eq "RelatedItem" -or  $key -eq "@odata.id")
-                    {
-                        continue
-                    }
-                    $ht_voltage_info[$key] = $hash_table[$key]
-                }
-                
-                # Output result
-                ConvertOutputHashTableToObject $ht_voltage_info
-            }
+            $converted_object_chassis = $response.Content | ConvertFrom-Json
             
+            #get sensors resource
+            $sensors_url_string = "https://$ip" + $converted_object_chassis."Oem"."Lenovo"."Sensors"."@odata.id"
+            $response = Invoke-WebRequest -Uri $sensors_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object_sensors = $response.Content | ConvertFrom-Json
+
+            # Loop all sensor resource instance
+            foreach($i in $converted_object_sensors.Members)
+            {
+                $sensor_url_string = "https://$ip" + $i."@odata.id"
+                $response = Invoke-WebRequest -Uri $sensor_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+                $converted_object_sensor = $response.Content | ConvertFrom-Json
+
+                #get property info of every sensor according to property list
+                $sensor_info = @{}
+                foreach($property in $property_list)
+                {
+                    if($response.Content.Contains($property))
+                    {
+                        $sensor_info[$property] = $converted_object_sensor.$property
+                    }
+                }
+
+                # Output result
+                ConvertOutputHashTableToObject $sensor_info
+            }
         }
-        
     }
     catch
     {
