@@ -268,7 +268,7 @@ function add_event_subscriptions
         }
         else
         {
-            Write-Host "The value of event type outside the scope,please check your input"
+            Write-Host "The value of resource type outside the scope,please check your input"
             return $False
         }
     }
