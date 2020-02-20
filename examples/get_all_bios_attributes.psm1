@@ -130,9 +130,8 @@ function get_all_bios_attributes
                 $response = Invoke-WebRequest -Uri $bios_url -Headers $JsonHeader -Method Get -UseBasicParsing
                 $converted_object = $response.Content | ConvertFrom-Json
                 
-                # Return result
+                # Output result
                 $converted_object.Attributes
-                Write-Host " "
             }
         }
     }

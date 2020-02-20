@@ -61,11 +61,14 @@ function create_session
    #>
     param(
         [Parameter(Mandatory=$True)]
-        [string]$ip="",
+        [ValidateNotNullOrEmpty()]
+        [string] $ip,
         [Parameter(Mandatory=$True)]
-        [string]$username="",
+        [ValidateNotNullOrEmpty()]
+        [string] $username,
         [Parameter(Mandatory=$True)]
-        [string]$password=""
+        [ValidateNotNullOrEmpty()]
+        [string] $password
         )
 
     Ignore_SSLCertificates
@@ -78,34 +81,33 @@ function create_session
     $bmc_credential = New-Object System.Management.Automation.PSCredential($bmc_username, $bmc_password_secure)
 
     $base_url = "https://$ip/redfish/v1/"
-    
 
     # Get SessionService url
     $response = Invoke-WebRequest -Uri $base_url -Method Get -Credential $bmc_credential -UseBasicParsing
 
     $converted_object = $response.Content | ConvertFrom-Json
     $hash_table = @{}
-    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+    $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
     $session_server_url_string = "https://$ip"+$hash_table.SessionService.'@odata.id'
 
-    # Get session creation url from SessionService 
+    # Get session creation url from SessionService
     $response = Invoke-WebRequest -Uri $session_server_url_string -Method Get -Credential $bmc_credential -UseBasicParsing
     $converted_object = $response.Content | ConvertFrom-Json
     $hash_table = @{}
-    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+    $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
     $session_url_string = "https://$ip"+$hash_table.Sessions.'@odata.id'
 
-    $JsonBody = @{ "Password" = $password
-            "UserName" = $username
-            } | ConvertTo-Json -Compress
+    $JsonBody = @{  "Password" = $password
+                    "UserName" = $username
+                } | ConvertTo-Json -Compress
 
     # Create session and acquire session info
     $response = Invoke-WebRequest -Uri $session_url_string -Method Post -Body $JsonBody -ContentType 'application/json'
 
-    $session = New-Object PSObject  
+    $session = New-Object PSObject
     $session|Add-Member -MemberType NoteProperty 'X-Auth-Token' $response.headers.'X-Auth-Token'
     $session|Add-Member -MemberType NoteProperty 'Location' $response.headers.Location
-    
+
     return $session
 }
 
@@ -121,25 +123,26 @@ function delete_session
    #>
     param(
         [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
         $ip,
         [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
         $session
         )
 
     $session_key = $session.'X-Auth-Token'
     $session_location = $session.Location
 
-    $JsonHeader = @{ "X-Auth-Token" = $session_key
+    $JsonHeader = @{ 'X-Auth-Token' = $session_key
     }
 
     # Complete the url if it's not start with proper format
     if($session_location.startswith('http') -eq $False)
     {
-        $session_location =  "https://$ip" + $session_location
+        $session_location = "https://$ip" + $session_location
     }
 
     $response = Invoke-WebRequest -Uri $session_location -Headers $JsonHeader -Method Delete -DisableKeepAlive
-
 }
 
 function get_system_urls
@@ -156,11 +159,13 @@ function get_system_urls
 
     param(
         [Parameter(Mandatory=$True)]
-        [string]$bmcip="",
+        [ValidateNotNullOrEmpty()]
+        [string] $bmcip,
         [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
         $session,
         [Parameter(Mandatory=$False)]
-        [string]$system_id="None"
+        [string] $system_id = "None"
         )
     
     # Create an null array for result return
@@ -169,7 +174,7 @@ function get_system_urls
     # Get the system url collection via Invoke-WebRequest
     $base_url = "https://$bmcip/redfish/v1/"
     $session_key = $session.'X-Auth-Token'
-    $JsonHeader = @{ "X-Auth-Token" = $session_key
+    $JsonHeader = @{ 'X-Auth-Token' = $session_key
     }
     $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
     $converted_object = $response.Content | ConvertFrom-Json
@@ -177,11 +182,11 @@ function get_system_urls
     $systems_url_string = "https://$bmcip" + $systems_url
 
     $response = Invoke-WebRequest -Uri $systems_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-    
+
     # Convert response content to hash table
     $converted_object = $response.Content | ConvertFrom-Json
     $hash_table = @{}
-    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+    $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
     
     # Set the $system_url_collection by checking $system_id value
     foreach ($i in $hash_table.Members)
@@ -213,7 +218,7 @@ function get_system_urls
             }
         }
     }
-            
+
     return $system_url_collection
 }
 
@@ -229,7 +234,7 @@ function read_config
    
     param(
         [Parameter(Mandatory=$False)]
-        [string]$config_file='config.ini'
+        [string] $config_file = 'config.ini'
         )
     
     $hash_table = @{'BmcIp'=''; 'BmcUsername'=''; 'BmcUserpassword'=''; 'SystemId'=''; 'ManagerId'=''; 'ChassisId'=''}
@@ -241,15 +246,15 @@ function read_config
             return $hash_table
         }
     }
-    $payload = Get-Content -Path $config_file |
-    Where-object {$_ -like '*=*'} |
-    ForEach-Object {
-        $infos = $_ -split '='
-        $key = $infos[0].Trim()
-        $value = $infos[1].Trim()
-        $hash_table[$key] = $value
-    }
-    
+    Get-Content -Path $config_file |
+        Where-object {$_ -like '*=*'} |
+            ForEach-Object {
+                $infos = $_ -split '='
+                $key = $infos[0].Trim()
+                $value = $infos[1].Trim()
+                $hash_table[$key] = $value
+            }
+
     return $hash_table
 }
 
@@ -276,5 +281,28 @@ function handle_exception
     }
 
     return $ret
+}
     
+function ConvertOutputHashTableToObject
+{
+   <#
+   .Synopsis
+    Convert output HashTable to Object
+   .DESCRIPTION
+    Convert output HashTable to Object
+    - outputhash: HashTable format output
+   #>
+
+    param(
+        [Parameter(Mandatory=$False)]
+        [hashtable]$outputhash
+        )
+
+    $object = New-Object Object
+
+    $outputhash.GetEnumerator()| ForEach-Object {
+        Add-Member -inputObject $object -memberType NoteProperty -name $_.Name -value $_.Value
+    }
+
+    return $object
 }

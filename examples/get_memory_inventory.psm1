@@ -115,30 +115,20 @@ function get_memory_inventory
                 $url_sub_memory = "https://$ip" + $memory_info."@odata.id"
                 $response = Invoke-WebRequest -Uri $url_sub_memory -Headers $JsonHeader -Method Get -UseBasicParsing
                 $converted_object = $response.Content | ConvertFrom-Json
-                if($converted_object.Status.State -eq "Absent")
+                
+                $hash_table = @{}
+                $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                foreach($key in $hash_table.Keys)
                 {
-                    $ht_memory_info["Status"] = $converted_object.Status
-                    $ht_memory_info["MemoryLocation"] = $converted_object.MemoryLocation
-                    $ht_memory_info["Id"] = $converted_object.Id
-                    $ht_memory_info
-                    Write-Host " "
-                    continue
-                }
-                else
-                {
-                    $hash_table = @{}
-                    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                    foreach($key in $hash_table.Keys)
+                    if($key -eq "Links" -or  $key -eq "Oem" -or $key -like "@*")
                     {
-                        if($key -eq "Links" -or  $key -eq "Oem" -or $key -like "@*")
-                        {
-                            continue
-                        }
-                        $ht_memory_info[$key] = $hash_table[$key]
+                        continue
                     }
+                    $ht_memory_info[$key] = $hash_table[$key]
                 }
-                $ht_memory_info
-                Write-Host " "
+                
+                # Output result
+                ConvertOutputHashTableToObject $ht_memory_info
             }
         }
     }

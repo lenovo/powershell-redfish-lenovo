@@ -117,6 +117,10 @@ function set_power_limit
         # Loop all chassis resource instance in $chassis_url_collection
         foreach($chassis_url_string in $chassis_url_collection)
         {
+            # Build headers with sesison key for authentication
+            $JsonHeader = @{ "X-Auth-Token" = $session_key
+            }
+
             #get chassis resource
             $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
@@ -142,28 +146,44 @@ function set_power_limit
                 return $False
             }
 
-           $str_isenable = ""
-           if($isenable -eq 1)
-           {
-                $str_isenable = "true"
-           }
-           else
-           {
-                $str_isenable = "false"
-           }
+            $str_isenable = ""
+            if($isenable -eq 1)
+            {
+                 $str_isenable = "true"
+            }
+            else
+            {
+                 $str_isenable = "false"
+            }
+           
+            if($isenable -eq 1)
+            {
+                 $JsonBody = '{"PowerControl": [{"PowerLimit":{"LimitInWatts":' + $powerlimit.ToString() + '}}]}'
+            }
+            else
+            {
+                 $JsonBody = '{"PowerControl": [{"PowerLimit":{"LimitInWatts":' + "null" + '}}]}'
+            }
+           
+            # get etag to set If-Match precondition
+            if($converted_object."@odata.etag" -ne $null)
+            {
+                $JsonHeader = @{ "If-Match" = $converted_object."@odata.etag"
+                            "X-Auth-Token" = $session_key
+                }
+            }
+            else
+            {
+                $JsonHeader = @{ "If-Match" = ""
+                            "X-Auth-Token" = $session_key
+                }
+            }
 
-           if($isenable -eq 1)
-           {
-                $JsonBody = '{"PowerControl": [{"PowerLimit":{"LimitInWatts":' + $powerlimit.ToString() + '}}]}'
-           }
-           else
-           {
-                $JsonBody = '{"PowerControl": [{"PowerLimit":{"LimitInWatts":' + "null" + '}}]}'
-           }
-           $response = Invoke-WebRequest -Uri $power_url -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-           Write-Host
+            # perform patch
+            $response = Invoke-WebRequest -Uri $power_url -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
+            Write-Host
                 [String]::Format("- PASS, statuscode {0} returned successfully to set powerlimit",$response.StatusCode)
-           return $True
+            return $True
         }
         
     }

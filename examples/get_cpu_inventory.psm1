@@ -130,9 +130,8 @@ function get_cpu_inventory
                 $ht_cpu_info["Model"] = $cpu_converted_object.Model
                 $ht_cpu_info["Socket"] = $cpu_converted_object.Socket
                 
-                # Return result
-                $ht_cpu_info
-                Write-Host " "
+                # Output result
+                ConvertOutputHashTableToObject $ht_cpu_info
             }
         }
     }

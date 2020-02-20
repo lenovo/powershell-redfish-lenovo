@@ -126,8 +126,8 @@ function get_chassis_indicator_led
                 $IndicatorLED = $hash_table."IndicatorLED"
                 $indicator_status["IndicatorLED"] = $IndicatorLED
 
-                # return result
-                return $indicator_status
+                # Output result
+                ConvertOutputHashTableToObject $indicator_status
             }  
         }
     }

@@ -127,9 +127,8 @@ function get_nic_inventory
                 $ht_network["AutoNeg"] = $converted_nic_x_object.AutoNeg
                 $ht_network["Health"] = $converted_nic_x_object.Status.Health
 
-                # Retrun result
-                $ht_network
-                Write-Host " "
+                # Output result
+                ConvertOutputHashTableToObject $ht_network
             }
             
         }  

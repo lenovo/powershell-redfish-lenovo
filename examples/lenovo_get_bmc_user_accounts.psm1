@@ -123,7 +123,6 @@ function lenovo_get_bmc_user_accounts
             if ($converted_object.UserName -ne '')
             {
                 $bmc_user['Id'] = $converted_object.Id
-                $bmc_user['Name'] = $converted_object.Name
                 $bmc_user['UserName'] = $converted_object.UserName
                 $bmc_user['Enabled'] = $converted_object.Enabled
                 $bmc_user['Locked'] = $converted_object.Locked
@@ -135,9 +134,8 @@ function lenovo_get_bmc_user_accounts
                     $bmc_user['AssignedPrivileges'] = $converted_object.AssignedPrivileges
                     $bmc_user['OemPrivileges'] = $converted_object.OemPrivileges
                 }
-
-                Write-Host
-                $bmc_user      
+                # Output result
+                ConvertOutputHashTableToObject $bmc_user      
             }
         }
     }

@@ -37,7 +37,7 @@ function update_bmc_user_password
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
-    - userid: Pass in BMC userid to be updated
+    - userid: Pass in BMC username to be updated
     - password_value: Pass in BMC user password to be updated
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE

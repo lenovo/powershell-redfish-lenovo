@@ -81,7 +81,7 @@ function set_bios_bootmode_legacy
     {
         $session_key = ""
         $session_location = ""
-        
+
         # Create session
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
@@ -97,20 +97,83 @@ function set_bios_bootmode_legacy
         # Loop all System resource instance in $system_url_collection
         foreach ($system_url_string in $system_url_collection)
         {
-            # Get system url from the system url collection
-            $uri_address_system = "https://$ip"+$system_url_string
-            $attribute = @{"BootSourceOverrideMode"="Legacy"}
+            # Get system resource
+            $url_address_system = "https://$ip"+$system_url_string
+            $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
+
+            # Get Bios resource
+            $converted_object = $response.Content | ConvertFrom-Json
+            $Bios_url = $converted_object.Bios."@odata.id"
+            $uri_address_Bios = "https://$ip" + $Bios_url
+            $response_bios_url = Invoke-WebRequest -Uri $uri_address_Bios -Headers $JsonHeader -Method Get -UseBasicParsing
+
+            # Get boot mode from bios attributes
+            $converted_object = $response_bios_url.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            if($hash_table.Attributes."BootMode")
+            {
+                $attribute_name = "BootMode"
+            }
+            elseif($hash_table.Attributes."SystemBootMode")
+            {
+                $attribute_name = "SystemBootMode"
+            }
+            else
+            {
+                $attribute_name = "BootModes_SystemBootMode"
+            }
+
+            # Get boot mode setting guide from bios registry
+            $WarningText = ""
+            $ValueName = "LegacyMode"
+            $bios_registry_url = "https://$ip/redfish/v1/Registries/" +$hash_table."AttributeRegistry"
+            $response = Invoke-WebRequest -Uri $bios_registry_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object_reg = $response.Content | ConvertFrom-Json
+            foreach($location in $converted_object_reg.Location)
+            {
+                $isfind = $True
+                if($location.Language -eq "en")
+                {
+                    # Get schema uri
+                    $url ="https://$ip" +  $location.Uri
+                    $response = Invoke-WebRequest -Uri $url -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $converted_object = $response.Content | ConvertFrom-Json
+                    foreach($entry in $converted_object.RegistryEntries.Attributes)
+                    {
+                        if($entry.AttributeName -eq $attribute_name)
+                        {
+                            if($entry.WarningText)
+                            {
+                                $WarningText = $entry.WarningText
+                            }
+                            foreach($value in $entry.Value)
+                            {
+                                if($value.ValueName -like "legacy*")
+                                {
+                                    $ValueName = $value.ValueName
+                                }
+                            }
+                            break
+                        }
+                    }
+                    break
+                }
+            }
 
             # Build request body and send requests to set BIOS bootmode
-            $body = @{"Boot"=$attribute}
-            $json_body = $body | convertto-json
+            $pending_url = "https://$ip"+$hash_table."@Redfish.Settings"."SettingsObject"."@odata.id"
+            $JsonBody = @{ Attributes = @{
+                "$attribute_name"=$ValueName
+                }} | ConvertTo-Json -Compress
+
             try
             {
-                $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Patch  -Body $json_body -ContentType 'application/json'
+                $response = Invoke-WebRequest -Uri $pending_url -Headers $JsonHeader -Method Patch  -Body $JsonBody -ContentType 'application/json'
             }
             catch
             {
-                # Handle http exception response for Post request
+                # Handle http exception response for Patch request
                 if ($_.Exception.Response)
                 {
                     Write-Host "Error occured, status code:" $_.Exception.Response.StatusCode.Value__
@@ -131,7 +194,7 @@ function set_bios_bootmode_legacy
             }
 
             Write-Host
-            [String]::Format("- PASS, statuscode {0} returned successfully to set bios bootmode legacy",$response.StatusCode)
+            [String]::Format("- PASS, statuscode {0} returned successfully to set bios bootmode legacy. WarningText: {1}",$response.StatusCode, $WarningText)
             return $True 
         }
     }
