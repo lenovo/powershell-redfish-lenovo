@@ -38,10 +38,10 @@ function add_event_subscriptions
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
     - destination: Pass in the new subscription's destination url you want to set
-    - eventtypes: Pass in the event types you want to receive, supported eventtypes: [StatusChange,ResourceUpdated,ResourceAdded,ResourceRemoved,Alert,MetricReport] 
+    - resourcetypes: Pass in the resource types you want to received.  
     - context: Specify a client-supplied string that is stored with the event destination subscription.
    .EXAMPLE
-    add_event_subscriptions -ip 10.10.10.10 -username USERID -password PASSW0RD -destination "https://10.119.171.6" -eventtypes @("StatusChange","ResourceUpdated") -context test
+    add_event_subscriptions -ip 10.10.10.10 -username USERID -password PASSW0RD -destination "https://10.119.171.6" -resourcetypes @("LogService","Job") -context test
    #>
    
     param

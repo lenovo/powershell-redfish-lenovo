@@ -162,8 +162,6 @@ function lenovo_bmc_config_restore
 
             $JsonBody = @{"Passphrase"=$backuppasswd
                           "ConfigContent" = $list}|ConvertTo-Json -Compress
-            
-            $JsonBody
 
             $response = Invoke-WebRequest -Uri $action_restore_url -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
             Write-Host

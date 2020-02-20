@@ -43,7 +43,7 @@ function send_test_event
     - all: Delete all subscriptions
     - id: Pass in the subscription id you want to delete
    .EXAMPLE
-    send_test_event -ip 10.10.10.10 -username USERID -password PASSW0RD -eventid 40000001 -message test event -severity OK
+    send_test_event -ip 10.10.10.10 -username USERID -password PASSW0RD -eventid 40000001 -message 'test event' -severity OK
    #>
    
     param

@@ -45,7 +45,7 @@ function lenovo_set_serial_interfaces
     - clikey: The key sequence to exit serial redirection and enter CLI
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_set_serial_interfaces -ip 10.10.10.10 -username USERID -password PASSW0RD -interfaceid INTERFACEID -bitrate BITRATE -stopbitd -STOPBITS -parity PARITY -enabled ENABLED -climode CLIMODE -state STATE -clikey CLIKEY 
+    lenovo_set_serial_interfaces -ip 10.10.10.10 -username USERID -password PASSW0RD -interfaceid INTERFACEID -bitrate BITRATE -stopbits -STOPBITS -parity PARITY -enabled ENABLED -climode CLIMODE -state STATE -clikey CLIKEY 
    #>
    
     param
