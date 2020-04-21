@@ -1,6 +1,6 @@
 ###
 #
-# Lenovo Redfish examples - Set bmc ntp
+# Lenovo Redfish examples - Umount virtual media
 #
 # Copyright Notice:
 #
@@ -24,25 +24,25 @@
 #  Import utility libraries
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
-
-
-function set_bmc_ntp
+function umount_virtual_media
 {
-    <#
+   <#
    .Synopsis
-    Cmdlet used to set bmc ntp
+    Cmdlet used to umount virtual media
    .DESCRIPTION
-    Cmdlet used to set bmc ntp from BMC using Redfish API. Set result will be printed to the screen. Connection information can be specified via command parameter or configuration file.
+    Cmdlet used to umount virtual media information using Redfish API
+    Connection information can be specified via command parameter or configuration file
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
+    - image: Mount virtual media name
+    - mounttype: Types of mount virtual media
     - config_file: Pass in configuration file path, default configuration file is config.ini
-    - ntp_server: Specify the names of  NTP servers, up to 4 NTP servers can be used
-    - enabled: Indicates if the NTP protocol is enabled or disabled. (0:false, 1:true)
    .EXAMPLE
-    set_bmc_ntp -ip 10.10.10.10 -username USERID -password PASSW0RD -ntp_server 10.10.10.2 -enabled 0
+    Example of HTTP/NFS:
+    "mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD --image isoname.img"
    #>
-   
+    
     param
     (
         [Parameter(Mandatory=$False)]
@@ -51,16 +51,15 @@ function set_bmc_ntp
         [string]$username="",
         [Parameter(Mandatory=$False)]
         [string]$password="",
+        [Parameter(Mandatory=$True)]
+        [string]$image="",
         [Parameter(Mandatory=$False)]
-        [string]$config_file="config.ini",
-        [Parameter(Mandatory=$True, HelpMessage="Input the ntp server(array  Items: string,Item count: 4)")]
-        [array]$ntp_server,
-        [Parameter(Mandatory=$True, HelpMessage="Input the ProtocolEnabled (0:false, 1:true)")]
-        [int]$enabled
+        [string]$config_file="config.ini"
     )
         
     # Get configuration info from config file
     $ht_config_ini_info = read_config -config_file $config_file
+
     # If the parameter is not specified via command line, use the setting from configuration file
     if ($ip -eq "")
     {
@@ -85,8 +84,7 @@ function set_bmc_ntp
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
 
-        # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{"X-Auth-Token" = $session_key}
     
         # Get the manager url collection
         $manager_url_collection = @()
@@ -97,8 +95,8 @@ function set_bmc_ntp
         
         $managers_url = $converted_object.Managers."@odata.id"
         $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
-       
+        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
+    
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
         $hash_table = @{}
@@ -116,47 +114,66 @@ function set_bmc_ntp
         foreach ($manager_url_string in $manager_url_collection)
         {
         
-            # Get LogServices from the Manager resource instance
-            $uri_address_manager = "https://$ip"+$manager_url_string
+            # Get servicedata uri from the Manager resource instance
+            $uri_address_manager = "https://$ip" + $manager_url_string
+
+            # Get the virtual media url
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
-            
             $converted_object = $response.Content | ConvertFrom-Json
-            $uri_network ="https://$ip"+$converted_object.NetworkProtocol.'@odata.id'
-            $parameter = @{"NTPServers"=$ntp_server; "ProtocolEnabled"=[bool]$enabled}
-            
-            # Build request body and send requests to set bmc ntp
-            $body = @{"NTP"=$parameter}
-            $json_body = $body | convertto-json
-            try
+            $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
+
+            $uri_remote_map ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteMap"."@odata.id"
+            $uri_remote_control ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteControl"."@odata.id"
+
+            # Get the virtual media response resource
+            $response = Invoke-WebRequest -Uri $uri_virtual_media -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+            $members_count = $hash_table."Members@odata.count"
+            if($members_count -eq 0)
             {
-                $response = Invoke-WebRequest -Uri $uri_network -Headers $JsonHeader -Method Patch  -Body $json_body -ContentType 'application/json'
+                Write-Host "This server doesn't mount virtual media."
             }
-            catch
-            {   
-                # Handle http exception response for Post request
-                if ($_.Exception.Response)
+
+            # umount_virtual_media
+            foreach($i in $hash_table.Members)
+            {
+                $virtual_media_x_url = "https://$ip" + $i."@odata.id"
+                # Get the virtual media response resource
+                $response = Invoke-WebRequest -Uri $virtual_media_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $converted_object = $response.Content | ConvertFrom-Json
+                $hash_table = @{}
+                $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+                if (!($hash_table.Id -match "Remote"))
                 {
-                    Write-Host "Error occured, status code:" $_.Exception.Response.StatusCode.Value__
-                    if($_.ErrorDetails.Message)
+                    if($image -eq $hash_table.ImageName)
                     {
-                        $response_j = $_.ErrorDetails.Message | ConvertFrom-Json | Select-Object -Expand error
-                        $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
-                        Write-Host "Error message:" $response_j.Resolution
+
+                        $body = @{}
+                        $body["Image"] = $Null
+                        $json_body = $body | convertto-json
+
+                        $virtual_media_member_uri = "https://$ip" + $hash_table."@odata.id"
+                        $response = Invoke-WebRequest -Uri $virtual_media_member_uri -Headers $JsonHeader -Method Patch -Body $json_body -ContentType 'application/json'
+
+                        Write-Host
+                        [String]::Format("- PASS, statuscode {0} returned to umount virtual media successful",$response.StatusCode) 
+                        return $True
+                    }
+                    else
+                    {
+                        continue    
                     }
                 }
-                # Handle system exception response for Post request
-                elseif($_.Exception)
-                {
-                    Write-Host "Error message:" $_.Exception.Message
-                    Write-Host "Please check arguments or server status."
-                }
-                return $False
             }
-            Write-Host
-            [String]::Format("- PASS, statuscode {0} returned successfully to set bmc ntp successful",$response.StatusCode) 
+            $result = "Please check the image name is correct and has been mounted."
+            $result
+            return $False
         }
-        return $True
-    }
+    }    
     catch
     {
         # Handle http exception response

@@ -19,6 +19,35 @@
 # under the License.
 ###
 
+# Ignore SSL Certificates
+function Ignore_SSLCertificates
+{
+    $Provider = New-Object Microsoft.CSharp.CSharpCodeProvider
+    $Compiler = $Provider.CreateCompiler()
+    $Params = New-Object System.CodeDom.Compiler.CompilerParameters
+    $Params.GenerateExecutable = $false
+    $Params.GenerateInMemory = $true
+    $Params.IncludeDebugInformation = $false
+    $Params.ReferencedAssemblies.Add("System.DLL") > $null
+    $TASource=@'
+        namespace Local.ToolkitExtensions.Net.CertificatePolicy
+        {
+            public class TrustAll : System.Net.ICertificatePolicy
+            {
+                public bool CheckValidationResult(System.Net.ServicePoint sp,System.Security.Cryptography.X509Certificates.X509Certificate cert, System.Net.WebRequest req, int problem)
+                {
+                    return true;
+                }
+        }
+    }
+'@ 
+    $TAResults=$Provider.CompileAssemblyFromSource($Params,$TASource)
+    $TAAssembly=$TAResults.CompiledAssembly
+    ## We create an instance of TrustAll and attach it to the ServicePointManager
+    $TrustAll = $TAAssembly.CreateInstance("Local.ToolkitExtensions.Net.CertificatePolicy.TrustAll")
+    [System.Net.ServicePointManager]::CertificatePolicy = $TrustAll
+}
+
 function create_session
 {
     <#
@@ -42,35 +71,6 @@ function create_session
         [string] $password
         )
 
-    # Ignore SSL Certificates
-    function Ignore_SSLCertificates
-    {
-        $Provider = New-Object Microsoft.CSharp.CSharpCodeProvider
-        $Compiler = $Provider.CreateCompiler()
-        $Params = New-Object System.CodeDom.Compiler.CompilerParameters
-        $Params.GenerateExecutable = $false
-        $Params.GenerateInMemory = $true
-        $Params.IncludeDebugInformation = $false
-        $Params.ReferencedAssemblies.Add("System.DLL") > $null
-        $TASource=@'
-            namespace Local.ToolkitExtensions.Net.CertificatePolicy
-            {
-                public class TrustAll : System.Net.ICertificatePolicy
-                {
-                    public bool CheckValidationResult(System.Net.ServicePoint sp,System.Security.Cryptography.X509Certificates.X509Certificate cert, System.Net.WebRequest req, int problem)
-                    {
-                        return true;
-                    }
-            }
-        }
-'@ 
-        $TAResults=$Provider.CompileAssemblyFromSource($Params,$TASource)
-        $TAAssembly=$TAResults.CompiledAssembly
-        ## We create an instance of TrustAll and attach it to the ServicePointManager
-        $TrustAll = $TAAssembly.CreateInstance("Local.ToolkitExtensions.Net.CertificatePolicy.TrustAll")
-        [System.Net.ServicePointManager]::CertificatePolicy = $TrustAll
-    }
-    
     Ignore_SSLCertificates
 
     # Set BMC access credential
@@ -258,6 +258,31 @@ function read_config
     return $hash_table
 }
 
+function handle_exception
+{
+    param(
+        [Parameter(Mandatory=$True)]
+        [object]$arg_object
+        )
+
+    # Handle HTTP exception response
+    if($arg_object.Exception.Response)
+    {
+        Write-Host
+        [String]::Format("Error occured, error code:{0}",$arg_object.Exception.Response.StatusCode.Value__)
+        $sr = new-object System.IO.StreamReader $arg_object.Exception.Response.GetResponseStream()
+        $resobject = $sr.ReadToEnd() | ConvertFrom-Json
+        $ret = $resobject.error.('@Message.ExtendedInfo')
+    }
+    # Handle system exception response
+    elseif($_.Exception)
+    {
+        $ret =  "Error message:" + $_.Exception.Message + ", Please check arguments or server status."
+    }
+
+    return $ret
+}
+    
 function ConvertOutputHashTableToObject
 {
    <#

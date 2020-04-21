@@ -1,6 +1,6 @@
 ﻿###
 #
-# Lenovo Redfish examples - Reset secure boot
+# Lenovo Redfish examples - Get the CPU information
 #
 # Copyright Notice:
 #
@@ -19,33 +19,30 @@
 # under the License.
 ###
 
+
 ###
 #  Import utility libraries
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
 
-function reset_secure_boot
+function lenovo_get_cpu_inventory
 {
     <#
    .Synopsis
-    Cmdlet used to Enable secure boot
+    Cmdlet used to Get lenovo cpu inventory
    .DESCRIPTION
-    Cmdlet used to Enable secure boot from BMC using Redfish API. Logs will be printed to the screen.Connection information can be specified via command parameter or configuration file.
+    Cmdlet used to Get cpu inventory from BMC using Redfish API. cpu info will be printed to the screen. Connection information can be specified via command parameter or configuration file.
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
-    - system_id: Pass in System resource instance id(None: first instance, all: all instances)
-    - reset_keys_type:Pass in secure boot types(must be "DeleteAllKeys", "DeletePK" or "ResetAllKeysToDefault")
+    - system_id:Pass in ComputerSystem instance id(None: first instance, all: all instances)
+    - system_id:Pass in Cpu member id
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    reset_secure_boot -ip 10.10.10.10 -username USERID -password PASSW0RD -system_id None -reset_keys_type DeleteAllKeys
+    get_cpu_inventory -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
-        [System.String]
-        [ValidateSet("DeleteAllKeys","DeletePK","ResetAllKeysToDefault")]
-        [Parameter(Mandatory=$True)]
-        $reset_keys_type,
         [Parameter(Mandatory=$False)]
         [string]$ip="",
         [Parameter(Mandatory=$False)]
@@ -54,6 +51,8 @@ function reset_secure_boot
         [string]$password="",
         [Parameter(Mandatory=$False)]
         [string]$system_id="None",
+        [Parameter(Mandatory=$False)]
+        [string]$member_id="None",
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
         )
@@ -79,7 +78,7 @@ function reset_secure_boot
     {
         $system_id = [string]($ht_config_ini_info['SystemId'])
     }
-    
+
     try
     {
         $session_key = ""
@@ -97,34 +96,71 @@ function reset_secure_boot
         # Get the system url collection
         $system_url_collection = @()
         $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
-
+        
         # Loop all System resource instance in $system_url_collection
         foreach($system_url_string in $system_url_collection)
         {
             # Get system resource
-            $system_url_string = "https://$ip" + $system_url_string
-            $response = Invoke-WebRequest -Uri $system_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+            $url_address_system = "https://$ip"+$system_url_string
+            $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
 
-            # Get secure boot resource
-            $secure_boot_url ="https://$ip" + $converted_object."SecureBoot"."@odata.id"
-            $response = Invoke-WebRequest -Uri $secure_boot_url -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
+            # Get processors resource
+            $processors_url = "https://$ip" + $converted_object.Processors."@odata.id"      
+            $processors_response =   Invoke-WebRequest -Uri $processors_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $processors_converted_object = $processors_response.Content | ConvertFrom-Json
 
-            # Reset secure boot
-            $reset_action_url ="https://$ip" + $converted_object.Actions."#SecureBoot.ResetKeys".target
-            $JsonBody = @{"ResetKeysType" = $reset_keys_type} | ConvertTo-Json -Compress
-            $response = Invoke-WebRequest -Uri $reset_action_url -Headers $JsonHeader -Method Post -Body $JsonBody -ContentType 'application/json'
+            # Get cpu count
+            $cpu_count = $processors_converted_object."Members@odata.count"
+
+            if(($member_id -lt 0) -or ($member_id -gt $cpu_count))
+            {
+                Write-Host "Invalid CPU member id, Please check arguments or server status."
+            }
+
+            # Loop all cpu resource instance in processor resource
+            for($i = 0;$i -lt $cpu_count ;$i++)
+            {
+                if($i -ne ($member_id - 1))
+                {
+                    continue
+                }
+
+                # Get cpu resource
+                $cpu_url = "https://$ip" + $processors_converted_object.Members[$i]."@odata.id"
+                $cpu_response =   Invoke-WebRequest -Uri $cpu_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $cpu_converted_object = $cpu_response.Content | ConvertFrom-Json
+                $ht_cpu_info = @{}
+                $ht_cpu_info["Id"] = $cpu_converted_object.Id
+                $ht_cpu_info["Name"] = $cpu_converted_object.Name
+                $ht_cpu_info["TotalThreads"] = $cpu_converted_object.TotalThreads
+                $ht_cpu_info["InstructionSet"] = $cpu_converted_object.InstructionSet
+                $ht_cpu_info["State"] = $cpu_converted_object.Status.State
+                $ht_cpu_info["Health"] = $cpu_converted_object.Status.Health
+                $ht_cpu_info["ProcessorType"] = $cpu_converted_object.ProcessorType
+                $ht_cpu_info["TotalCores"] = $cpu_converted_object.TotalCores
+                $ht_cpu_info["Manufacturer"] = $cpu_converted_object.Manufacturer
+                $ht_cpu_info["MaxSpeedMHz"] = $cpu_converted_object.MaxSpeedMHz
+                $ht_cpu_info["Model"] = $cpu_converted_object.Model
+                $ht_cpu_info["Socket"] = $cpu_converted_object.Socket
+
+                if ($null -ne $cpu_converted_object.Oem.Lenovo.CacheInfo)
+                {
+                    $ht_cpu_info["CacheInfo"] = $cpu_converted_object.Oem.Lenovo.CacheInfo
+                }
+                if ($null -ne $cpu_converted_object.Oem.Lenovo.CurrentClockSpeedMHz)
+                {
+                    $ht_cpu_info["CurrentClockSpeedMHz"] = $cpu_converted_object.Oem.Lenovo.CurrentClockSpeedMHz
+                }
+                
+                # Return result
+                $ht_cpu_info
+                Write-Host " "
+            }
         }
-
-        # Return result
-        $ret = @{ret = "True";msg = "reset successful"}
-        $ret
     }
     catch
     {
-        $info=$_.InvocationInfo
-        [String]::Format("`n-Error occured!file:{0} line:{1},col:{2},msg:{3},fullname:{4}`n" ,$info.ScriptName,$info.ScriptLineNumber,$info.OffsetInLine ,$_.Exception.Message,$_.Exception.GetType().FullName)
         # Handle http exception response
         if($_.Exception.Response)
         {
@@ -138,6 +174,11 @@ function reset_secure_boot
                 $response_j = $_.ErrorDetails.Message | ConvertFrom-Json | Select-Object -Expand error
                 $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
                 Write-Host "Error message:" $response_j.Resolution
+            }
+            else
+            {
+                Write-Host "Error message:" $_.Exception.Message
+                Write-Host "Please check arguments or server status."        
             }
         }
         # Handle system exception response
@@ -155,5 +196,5 @@ function reset_secure_boot
         {
             delete_session -ip $ip -session $session
         }
-    }
+    }    
 }

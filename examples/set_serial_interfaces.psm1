@@ -24,7 +24,7 @@
 #  Import utility libraries
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
-function lenovo_set_serial_interfaces
+function set_serial_interfaces
 {
    <#
    .Synopsis
@@ -40,12 +40,9 @@ function lenovo_set_serial_interfaces
     - stopbits: This property shall indicate the stop bits for the serial connection. Support:["1","2"]
     - parity: This property shall indicate parity information for a serial connection. Support: ["None", "Even", "Odd"]
     - enabled: The value of this property shall be a boolean indicating whether this interface is enabled. Support:(0:false,1:true)
-    - climode: This property shall indicate command-line interface mode. Support:["Compatible", "UserDefined"]
-    - state: Specify the enabled and disabled state of the serial interface. Support:["Enabled", "Offline"]
-    - clikey: The key sequence to exit serial redirection and enter CLI
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_set_serial_interfaces -ip 10.10.10.10 -username USERID -password PASSW0RD -interfaceid INTERFACEID -bitrate BITRATE -stopbits -STOPBITS -parity PARITY -enabled ENABLED -climode CLIMODE -state STATE -clikey CLIKEY 
+    set_serial_interfaces -ip 10.10.10.10 -username USERID -password PASSW0RD -interfaceid INTERFACEID -bitrate BITRATE -stopbit -STOPBITS -parity PARITY -enabled ENABLED
    #>
    
     param
@@ -66,12 +63,6 @@ function lenovo_set_serial_interfaces
         [string]$parity="",
         [Parameter(Mandatory=$False)]
         [int]$enabled="",
-        [Parameter(Mandatory=$False)]
-        [string]$climode="",
-        [Parameter(Mandatory=$False)]
-        [string]$state="",
-        [Parameter(Mandatory=$False)]
-        [string]$clikey="",
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
     )
@@ -134,10 +125,6 @@ function lenovo_set_serial_interfaces
             # Get service data uri from the Manager resource instance
             $uri_address_manager = "https://$ip" + $manager_url_string
 
-            # Build headers with sesison key for authentication
-            $JsonHeader = @{ "X-Auth-Token" = $session_key
-            }
-
             # Get the serial interfaces url
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
@@ -158,6 +145,30 @@ function lenovo_set_serial_interfaces
             }
             $serial_interfaces = $serial_interfaces_url_collection[$index]
             $serial_interfaces_x_url = "https://$ip" + $serial_interfaces.'@odata.id'
+
+            # get etag to set If-Match precondition
+            $response = Invoke-WebRequest -Uri $serial_interfaces_x_url -Headers $JsonHeader -Method Get -UseBasicParsing 
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+            if ($null -ne $hash_table."@odata.etag")
+            {
+                $etag = $hash_table."@odata.etag"
+            }
+            else
+            {
+                $etag = ""
+            }
+            $JsonHeader["If-Match"] = $etag
+
+            if($null -eq $hash_table.BitRate)
+            {
+                Write-Host "The specified Interface Id {0} has no BitRate property, not valid.",$hash_table.Id
+            }
+
+            $hash_table."@odata.etag"
+            $hash_table.BitRate
 
             $body = @{}
             # Build body for set serial interfaces properties value
@@ -194,66 +205,6 @@ function lenovo_set_serial_interfaces
                 }
             }
 
-            # Get serial interfaces resource
-            $response = Invoke-WebRequest -Uri $serial_interfaces_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-            $hash_table = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-            
-            # check whether the specified interface is valid
-            if($hash_table.keys -notcontains "BitRate")
-            {
-                Write-Host
-                [String]::Format("The specified Interface Id {0} has no BitRate property, not valid.", $interfaceid)
-                return $False
-            }
-            # get etag to set If-Match precondition in header
-            if($converted_object."@odata.etag" -ne $null)
-            {
-                $JsonHeader = @{ "If-Match" = $converted_object."@odata.etag"
-                            "X-Auth-Token" = $session_key
-                }
-            }
-            else
-            {
-                $JsonHeader = @{ "If-Match" = ""
-                            "X-Auth-Token" = $session_key
-                }
-            }
-            
-            # Build Oem part in body
-            $lenovo = @{}
-            if($hash_table.keys -contains "Oem")
-            {
-                if($climode -ne "")
-                {
-                    $lenovo["CLIMode"] = $climode
-                }
-                if($state -ne "")
-                {
-                    $lenovo["SerialInterfaceState"] = $state
-                }
-                else
-                {
-                    
-                    if($body['InterfaceEnabled'] -eq $True)
-                    {
-                        $lenovo['SerialInterfaceState'] = "Enabled"
-                    }
-                    else
-                    {
-                        $lenovo['SerialInterfaceState'] = "Offline"
-                    }
-                }
-                if($clikey -ne "")
-                {
-                    $lenovo["EnterCLIKeySequence"] = $clikey
-                }
-            }
-            if($lenovo.count -ne 0)
-            {
-                $body["Oem"] = @{"Lenovo"=$lenovo}
-            }
             $json_body = $body | ConvertTo-Json -Compress 
             # Request set serial interface
             $response = Invoke-WebRequest -Uri $serial_interfaces_x_url -Headers $JsonHeader -Method Patch -Body $json_body -ContentType 'application/json' -UseBasicParsing
