@@ -116,6 +116,7 @@ function lenovo_create_bmc_user
         #Get the first empty account url
         $url_dest = ""
         $roleuri = ""
+
         foreach($url_tmp_account in $list_url_account)
         {
             $url_account = "https://$ip" + $url_tmp_account
@@ -133,6 +134,7 @@ function lenovo_create_bmc_user
                 return $False
             }
         }
+
         if($url_dest -eq "")
         {
             Write-Host "accounts is full,can't create a new account"
@@ -140,20 +142,8 @@ function lenovo_create_bmc_user
         }
 
         #Set rolename
-        $role_name = ""
-        if("Supervisor"  -in $authority)
-        {
-            $role_name = "Administrator"
-        }elseif("Operator"  -in $authority)
-        {
-            $role_name = "Operator"
-        }elseif("ReadOnly"  -in $authority)
-        {
-            $role_name = "ReadOnly"
-        }else
-        {
-            $role_name = "CustomRole" + $url_dest.Split("/")[-1]
-        }
+        $role_name = "CustomRole" + $url_dest.Split("/")[-1]
+
         $links_role = @{}
         if($role_name -match "CustomRole")
         {
