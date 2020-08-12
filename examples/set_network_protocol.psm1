@@ -24,7 +24,7 @@
 #  Import utility libraries
 ###
 Import-module $PSScriptRoot\lenovo_utils.psm1
-function set_networkprotocol
+function set_network_protocol
 {
    <#
    .Synopsis

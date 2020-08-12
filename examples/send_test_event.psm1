@@ -43,7 +43,7 @@ function send_test_event
     - all: Delete all subscriptions
     - id: Pass in the subscription id you want to delete
    .EXAMPLE
-    send_test_event -ip 10.10.10.10 -username USERID -password PASSW0RD -eventid 40000001 -message test event -severity OK
+    send_test_event -ip 10.10.10.10 -username USERID -password PASSW0RD -eventid 40000001 -message 'test event' -severity OK
    #>
    
     param
@@ -108,7 +108,6 @@ function send_test_event
         $send_event_url = "https://$ip" + $converted_object.Actions."#EventService.SubmitTestEvent".target
         $timestamp = Get-Date -Format 'yyyy-MM-ddTHH:mm:ss+08:00'
         $JsonBody = @{"EventId"=$eventid
-                      "EventType" = "Alert"
                       "EventTimestamp" = $timestamp
                       "Message" = $message
                       "MessageArgs" = @()

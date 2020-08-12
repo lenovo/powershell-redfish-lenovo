@@ -121,8 +121,26 @@ function reset_bios_default{
             # Reset Bios default value for the System resource instance
             $temp = $hash_table."Actions"."#Bios.ResetBios"."target"
             $uri_reset_bios_default = "https://$ip"+ $temp
+            $JsonBody = @{}|ConvertTo-Json -Compress
             
-            $response = Invoke-WebRequest -Uri $uri_reset_bios_default -Headers $JsonHeader -Method Post -ContentType 'application/json'            
+            $body = @{ResetType = "default"}
+            if($converted_object.Actions.'#Bios.ResetBios'.'@Redfish.ActionInfo')
+            {
+               $url_actioninfo = "https://$ip"+$hash_table.Actions.'#Bios.ResetBios'.'@Redfish.ActionInfo'
+               $response = Invoke-WebRequest -Uri $url_actioninfo -Headers $JsonHeader -Method Get -UseBasicParsing
+               $converted_object = $response.Content | ConvertFrom-Json
+               foreach($parameter in $converted_object."Parameters")
+               {
+                   if($parameter."Name" -and $parameter."AllowableValues")
+                   {
+                       $values = $parameter."AllowableValues"
+                       $body = @{$parameter."Name"=$values[0]}
+                   }
+               }
+            }
+            $json_body = $body | convertto-json
+                
+            $response = Invoke-WebRequest -Uri $uri_reset_bios_default -Headers $JsonHeader -Method Post -Body $json_body -ContentType 'application/json'            
 
             Write-Host
             [String]::Format("- PASS, statuscode {0} returned successfully to reset bios default.",$response.StatusCode)

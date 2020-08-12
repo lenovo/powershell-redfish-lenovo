@@ -38,10 +38,10 @@ function add_event_subscriptions
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
     - destination: Pass in the new subscription's destination url you want to set
-    - eventtypes: Pass in the event types you want to receive, supported eventtypes: [StatusChange,ResourceUpdated,ResourceAdded,ResourceRemoved,Alert,MetricReport] 
+    - resourcetypes: Pass in the resource types you want to received.  
     - context: Specify a client-supplied string that is stored with the event destination subscription.
    .EXAMPLE
-    add_event_subscriptions -ip 10.10.10.10 -username USERID -password PASSW0RD -destination "https://10.119.171.6" -eventtypes @("StatusChange","ResourceUpdated") -context test
+    add_event_subscriptions -ip 10.10.10.10 -username USERID -password PASSW0RD -destination "https://10.119.171.6" -resourcetypes @("LogService","Job") -context test
    #>
    
     param
@@ -57,7 +57,7 @@ function add_event_subscriptions
         [Parameter(Mandatory=$True)]
         [string]$destination,
         [Parameter(Mandatory=$True)]
-        [String[]]$eventtypes,
+        [String[]]$resourcetypes,
         [Parameter(Mandatory=$True)]
         [string]$context
     )
@@ -78,16 +78,197 @@ function add_event_subscriptions
         $password = [string]($ht_config_ini_info['BmcUserpassword'])
     }
     
-    $list_event_types = @("StatusChange","ResourceUpdated","ResourceAdded","ResourceRemoved","Alert","MetricReport")
-    foreach($type in $eventtypes)
+    $list_resource_types = @(
+        "AccountService",
+        "ActionInfo",
+        "Assembly",
+        "AttributeRegistry",
+        "Bios",
+        "BootOption",
+        "BootOptionCollection",
+        "Chassis",
+        "ChassisCollection",
+        "CompositionService",
+        "ComputerSystem",
+        "ComputerSystemCollection",
+        "Drive",
+        "Endpoint",
+        "EndpointCollection",
+        "EthernetInterface",
+        "EthernetInterfaceCollection",
+        "Event",
+        "EventDestination",
+        "EventDestinationCollection",
+        "EventService",
+        "ExternalAccountProvider",
+        "ExternalAccountProviderCollection",
+        "FabricCollection",
+        "HostInterface",
+        "HostInterfaceCollection",
+        "IPAddresses",
+        "Job",
+        "JobCollection",
+        "JobService",
+        "JsonSchemaFile",
+        "JsonSchemaFileCollection",
+        "LenovoAccountService",
+        "LenovoAdapter",
+        "LenovoAdapterCollection",
+        "LenovoAlertRecipient",
+        "LenovoAlertRecipientCollection",
+        "LenovoAuthenticationAuthority",
+        "LenovoBootManager",
+        "LenovoBootManagerCollection",
+        "LenovoChassis",
+        "LenovoComputerSystem",
+        "LenovoConfigurationService",
+        "LenovoDNS",
+        "LenovoDateTimeService",
+        "LenovoDeviceInfo",
+        "LenovoDrive",
+        "LenovoEthernetInterface",
+        "LenovoEvent",
+        "LenovoFirmwareService",
+        "LenovoFirmwareServiceCollection",
+        "LenovoFoDKey",
+        "LenovoFoDKeyCollection",
+        "LenovoFoDService",
+        "LenovoHistoryMetricValue",
+        "LenovoHistoryMetricValueContainer",
+        "LenovoHistoryMetricValueContainerCollection",
+        "LenovoLDAPClient",
+        "LenovoLED",
+        "LenovoLEDCollection",
+        "LenovoLogEntry",
+        "LenovoLogService",
+        "LenovoManager",
+        "LenovoManagerAccount",
+        "LenovoManagerGroup",
+        "LenovoManagerGroupCollection",
+        "LenovoManagerNetworkProtocol",
+        "LenovoMemory",
+        "LenovoMemoryCollectionExtension",
+        "LenovoPortForwarding",
+        "LenovoPortForwardingMap",
+        "LenovoPortForwardingMapCollection",
+        "LenovoPower",
+        "LenovoProcessor",
+        "LenovoRedundancy",
+        "LenovoRemoteControlService",
+        "LenovoRemoteControlSession",
+        "LenovoRemoteControlSessionCollection",
+        "LenovoRemoteMapMedia",
+        "LenovoRemoteMapMediaCollection",
+        "LenovoRemoteMapService",
+        "LenovoRemoteMountMedia",
+        "LenovoRemoteMountMediaCollection",
+        "LenovoSMTPClient",
+        "LenovoSNMPProtocol",
+        "LenovoScheduledPowerAction",
+        "LenovoScheduledPowerActionCollection",
+        "LenovoSecurityService",
+        "LenovoSensor",
+        "LenovoSensorCollection",
+        "LenovoSerialInterface",
+        "LenovoServerProfileService",
+        "LenovoServiceData",
+        "LenovoServiceRoot",
+        "LenovoSlot",
+        "LenovoSlotCollection",
+        "LenovoSoftwareInventory",
+        "LenovoStorageVolume",
+        "LenovoTask",
+        "LenovoThermal",
+        "LenovoUpdateService",
+        "LenovoWatchdog",
+        "LenovoWatchdogCollection",
+        "LogEntry",
+        "LogEntryCollection",
+        "LogService",
+        "LogServiceCollection",
+        "Manager",
+        "ManagerAccount",
+        "ManagerAccountCollection",
+        "ManagerCollection",
+        "ManagerNetworkProtocol",
+        "Memory",
+        "MemoryCollection",
+        "Message",
+        "MessageRegistry",
+        "MessageRegistryCollection",
+        "MessageRegistryFile",
+        "MessageRegistryFileCollection",
+        "MetricDefinition",
+        "MetricDefinitionCollection",
+        "MetricReport",
+        "MetricReportCollection",
+        "MetricReportDefinition",
+        "MetricReportDefinitionCollection",
+        "NetworkAdapter",
+        "NetworkAdapterCollection",
+        "NetworkDeviceFunction",
+        "NetworkDeviceFunctionCollection",
+        "NetworkInterface",
+        "NetworkInterfaceCollection",
+        "NetworkPort",
+        "NetworkPortCollection",
+        "PCIeDevice",
+        "PCIeDeviceCollection",
+        "PCIeFunction",
+        "PCIeFunctionCollection",
+        "PCIeSlots",
+        "PhysicalContext",
+        "Port",
+        "PortCollection",
+        "Power",
+        "PrivilegeRegistry",
+        "Privileges",
+        "Processor",
+        "ProcessorCollection",
+        "ProcessorMetrics",
+        "Protocol",
+        "Redundancy",
+        "Resource",
+        "Role",
+        "RoleCollection",
+        "Schedule",
+        "SecureBoot",
+        "SerialInterface",
+        "SerialInterfaceCollection",
+        "ServiceRoot",
+        "Session",
+        "SessionCollection",
+        "SessionService",
+        "Settings",
+        "SoftwareInventory",
+        "SoftwareInventoryCollection",
+        "Storage",
+        "StorageCollection",
+        "Task",
+        "TaskCollection",
+        "TaskService",
+        "TelemetryService",
+        "Thermal",
+        "Triggers",
+        "TriggersCollection",
+        "UpdateService",
+        "VLanNetworkInterface",
+        "VLanNetworkInterfaceCollection",
+        "VirtualMedia",
+        "VirtualMediaCollection",
+        "Volume",
+        "VolumeCollection"
+    )
+
+    foreach($type in $resourcetypes)
     {
-        if($type  -in $list_event_types)
+        if($type  -in $list_resource_types)
         {
             continue
         }
         else
         {
-            Write-Host "The value of event type outside the scope,please check your input"
+            Write-Host "The value of resource type outside the scope,please check your input"
             return $False
         }
     }
@@ -119,7 +300,7 @@ function add_event_subscriptions
         #Add event subscriptions
         $subscriptions_url = "https://$ip" + $converted_object.Subscriptions."@odata.id"
         $JsonBody = @{"Destination"=$destination
-                             "EventTypes"=$eventtypes
+                             "ResourceTypes"=$resourcetypes
                              "Context"=$context
                              "Protocol"="Redfish"}|ConvertTo-Json -Compress
         $response = Invoke-WebRequest -Uri $subscriptions_url -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
