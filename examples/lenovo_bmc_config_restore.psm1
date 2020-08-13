@@ -143,6 +143,58 @@ function lenovo_bmc_config_restore
             $response = Invoke-WebRequest -Uri $config_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             $action_restore_url = "https://$ip" + $converted_object.Actions."#LenovoConfigurationService.RestoreConfiguration".target
+            $odata_type = $converted_object."@odata.type"
+
+            #check schema for json file version
+            $schema_prefix = ""
+            $schema_flag = $False
+            $temp = $odata_type.split('#')[-1]
+            $temp_list = $temp.split('.')
+            if(($temp_list.count) -gt 2)
+            {
+                $schema_prefix = $temp_list[0] + '.' + $temp_list[1]
+            }
+            else
+            {
+                $schema_prefix = $temp_list[0]
+            }
+
+            $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            $schema_url = "https://$ip" + $converted_object.JsonSchemas.'@odata.id'
+
+            $response = Invoke-WebRequest -Uri $schema_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+
+            foreach($schema in $converted_object.Members)
+            {
+                if($found)
+                {
+                    break
+                }
+                if(-not ($schema."@odata.id").contains($schema_prefix))
+                {
+                    continue
+                }
+                $found = $True
+                $schema_url_string = "https://$ip" + $schema."@odata.id"
+                $response = Invoke-WebRequest -Uri $schema_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+                $converted_object = $response.Content | ConvertFrom-Json
+                foreach($location in $converted_object."Location")
+                {
+                    if(-not ($location."Language").contains("en"))
+                    {
+                        continue
+                    }
+                    $uri = "https://$ip" + $location."Uri"
+                    $response = Invoke-WebRequest -Uri $uri -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $converted_object = $response.Content
+                    if($converted_object.contains("ConfigContent"))
+                    {
+                        $schema_flag = $true
+                    }
+                }
+            }
 
             #restore config
             $list = ""
@@ -159,16 +211,24 @@ function lenovo_bmc_config_restore
             {
                 $list += $i
             }
-
-            $JsonBody = @{"Passphrase"=$backuppasswd
-                          "ConfigContent" = $list}|ConvertTo-Json -Compress
+            if($schema_flag -eq $true)
+            {
+                $JsonBody = @{"Passphrase"=$backuppasswd
+                        "ConfigContent" = $list
+                    }|ConvertTo-Json -Compress
+            }
+            else
+            {
+                $JsonBody = @{"Passphrase"=$backuppasswd
+                        "bytes" = $list
+                    }|ConvertTo-Json -Compress
+            }
 
             $response = Invoke-WebRequest -Uri $action_restore_url -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
             Write-Host
             [String]::Format("- PASS, statuscode {0} returned successfully to restore config",$response.StatusCode)
             return $True
         }
-        
     }
     catch
     {

@@ -31,7 +31,7 @@ function lenovo_set_bmc_config_default
    .Synopsis
     Cmdlet used to Set bmc config default
    .DESCRIPTION
-    Cmdlet used to Get power limit from BMC using Redfish API. Information will be printed to the screen. Connection information can be specified via command parameter or configuration file.
+    Cmdlet used to Set bmc config default using Redfish API. Information will be printed to the screen. Connection information can be specified via command parameter or configuration file.
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
