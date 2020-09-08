@@ -89,29 +89,40 @@ function get_bios_attribute_metadata
         # Build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key
         }
+
+        $base_url = "https://$ip/redfish/v1/"
+        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+
+        $systems_url = $converted_object.Systems."@odata.id"
+        $systems_url_string = "https://$ip" + $systems_url
+        $response = Invoke-WebRequest -Uri $systems_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
         
-        # Get the system url collection
-        $system_url_collection = @()
-        $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
+        # Get system resource 
+        $system_url_string = "https://$ip" + $converted_object.Members[0]."@odata.id"
+        $response = Invoke-WebRequest -Uri $system_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
 
-        # Loop all System resource instance in $system_url_collection
-        foreach($system_url_string in $system_url_collection)
-        {
-            # Get system resource 
-            $system_url_string = "https://$ip" + $system_url_string
-            $response = Invoke-WebRequest -Uri $system_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
+        # Get metadata from bios resource instance
+        $bios_url = "https://$ip" +  $converted_object.Bios."@odata.id"
+        $response = Invoke-WebRequest -Uri $bios_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+        $Registry = $converted_object."AttributeRegistry"
 
-            # Get metadata from bios resource instance
-            $bios_url = "https://$ip" +  $converted_object.Bios."@odata.id"
-            $response = Invoke-WebRequest -Uri $bios_url -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-            $metadata_url = "https://$ip" + $converted_object."@odata.context"
+        # Return result 
+        $Registry_url = $base_url + "\Registries\" + $Registry
+        $response = Invoke-WebRequest -Uri $Registry_url -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
 
-            # Return result 
-            $ret = @{"Metadata_url" = $metadata_url}
-            ConvertOutputHashTableToObject $ret
-        }
+        $Registry_url_string = "https://$ip" + $converted_object."Location"."Uri"
+        $response = Invoke-WebRequest -Uri $Registry_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+        $response.Content | Out-File "bios_attribute_metadata.json"
+
+        Write-Host
+        [String]::Format("- PASS, statuscode {0} returned to successfully get bios attribute metadata at {1}",$response.StatusCode, "$PSScriptRoot\bios_attribute_metadata.json")
+        return $True   
+        
    }
    catch
     {

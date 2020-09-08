@@ -123,7 +123,7 @@ function reset_bios_default{
             $uri_reset_bios_default = "https://$ip"+ $temp
             $JsonBody = @{}|ConvertTo-Json -Compress
             
-            $body = @{}
+            $body = @{ResetType = "default"}
             if($converted_object.Actions.'#Bios.ResetBios'.'@Redfish.ActionInfo')
             {
                $url_actioninfo = "https://$ip"+$hash_table.Actions.'#Bios.ResetBios'.'@Redfish.ActionInfo'
