@@ -37,7 +37,7 @@ function lenovo_set_bmc_user_global
     - password: Pass in BMC username password
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_set_bmc_user_accounts -ip 10.10.10.10 -username USERID -password PASSW0RD
+    lenovo_set_bmc_user_global -ip 10.10.10.10 -username USERID -password PASSW0RD
    #>
    
     param(
