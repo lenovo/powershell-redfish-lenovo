@@ -61,9 +61,9 @@ function lenovo_create_raid_volume
         [string]$system_id="None",
         [Parameter(Mandatory=$False)]
         [string]$raidid="",
-        [Parameter(Mandatory=$False)]
+        [Parameter(Mandatory=$True)]
         [string]$volume_name="",
-        [Parameter(Mandatory=$False)]
+        [Parameter(Mandatory=$True)]
         [string]$raid_type="", 
         [Parameter(Mandatory=$False)]
         [int]$volume_capacity="",
@@ -169,10 +169,12 @@ function lenovo_create_raid_volume
                 for ($raid_index=0; $raid_index -ilt $storage_count; $raid_index++){
                     if (($raidid -eq $list_raid_id[$raid_index]) -or ($raidid -eq $list_raid_name[$raid_index])){
                         if ($list_raid_drive_num[$raid_index] -eq 0){                            
-                            return "There is no Drives on specified storage"
+                            Write-Host "There is no Drives on specified storage"
+                            return $False
                         }
                         if ($list_raid_volume_num[$raid_index] -ne 0){                            
-                            return "Volume has already been created on specified storage"
+                            Write-Host "Volume has already been created on specified storage"
+                            return $False
                         }
                     $target_raid_volumes_url = $list_raid_volume_urls[$raid_index]
                     break
@@ -192,12 +194,14 @@ function lenovo_create_raid_volume
                         $target_raid_volumes_url = $list_raid_volume_urls[$raid_index]
                     }
                     else{
-                        return "There are multi-storage which can be configured. Please specified the raidid."
+                        Write-Host "There are multi-storage which can be configured. Please specified the raidid."
+                        return $False
                     }
                 }
             }
             if ($target_raid_volumes_url -eq ""){
-                return "Failed to found storage that can be configured"
+                Write-Host "Failed to found storage that can be configured"
+                return $False
             }
             
             # USE POST to create a volume                   
@@ -231,9 +235,7 @@ function lenovo_create_raid_volume
             if ($response.StatusCode -in @(200,201)){
                 [String]::Format("RAID volume created successfully. statuscode {0}",$response.StatusCode)
             }
-            
         } # end foreach
-        
     }
     catch
     {
