@@ -102,7 +102,7 @@ function create_session
                 } | ConvertTo-Json -Compress
 
     # Create session and acquire session info
-    $response = Invoke-WebRequest -Uri $session_url_string -Method Post -Body $JsonBody -ContentType 'application/json'
+    $response = Invoke-WebRequest -UseBasicParsing -Uri $session_url_string -Method Post -Body $JsonBody -ContentType 'application/json'
 
     $session = New-Object PSObject
     $session|Add-Member -MemberType NoteProperty 'X-Auth-Token' $response.headers.'X-Auth-Token'
@@ -142,7 +142,7 @@ function delete_session
         $session_location = "https://$ip" + $session_location
     }
 
-    $response = Invoke-WebRequest -Uri $session_location -Headers $JsonHeader -Method Delete -DisableKeepAlive
+    $response = Invoke-WebRequest -UseBasicParsing -Uri $session_location -Headers $JsonHeader -Method Delete -DisableKeepAlive
 }
 
 function get_system_urls
