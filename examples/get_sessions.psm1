@@ -1,6 +1,6 @@
 ﻿###
 #
-# Lenovo Redfish examples - Get Session
+# Lenovo Redfish examples - Get Sessions
 #
 # Copyright Notice:
 #
@@ -29,13 +29,12 @@ function get_sessions
 {
     <#
    .Synopsis
-    Cmdlet used to Get session inventory
+    Cmdlet used to Get sessions
    .DESCRIPTION
-    Cmdlet used to Get session from BMC using Redfish API. Information will be printed to the screen. Connection information can be specified via command parameter or configuration file.
+    Cmdlet used to Get sessions from BMC using Redfish API. Information will be printed to the screen. Connection information can be specified via command parameter or configuration file.
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
-    - system_id:Pass in ComputerSystem instance id(None: first instance, all: all instances)
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
     get_sessions -ip 10.10.10.10 -username USERID -password PASSW0RD 
@@ -48,8 +47,6 @@ function get_sessions
         [string]$username="",
         [Parameter(Mandatory=$False)]
         [string]$password="",
-        [Parameter(Mandatory=$False)]
-        [string]$system_id="None",
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
         )
@@ -69,10 +66,6 @@ function get_sessions
     if ($password -eq "")
     {
         $password = [string]($ht_config_ini_info['BmcUserpassword'])
-    }
-    if ($system_id -eq "")
-    {
-        $system_id = [string]($ht_config_ini_info['SystemId'])
     }
 
     try
@@ -107,11 +100,9 @@ function get_sessions
         
         $session_url_collection = @()
         foreach($i in $converted_object.Members)
-        {
-            if($null -ne $i){       
-                $tmp_session_url_string = "https://$ip" + $i."@odata.id"
-                $session_url_collection += $tmp_session_url_string
-            }
+        { 
+            $tmp_session_url_string = "https://$ip" + $i."@odata.id"
+            $session_url_collection += $tmp_session_url_string
         }
         
         # Loop all session resource instance in $session_url_collection
@@ -121,17 +112,15 @@ function get_sessions
             $response = Invoke-WebRequest -Uri $session_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             
-            $sessions_info = $converted_object
             $hash_sessions = @{}
             $ht_sessions = @{}
-            $sessions_info.psobject.properties | Foreach { $hash_sessions[$_.Name] = $_.Value }
+            $converted_object.psobject.properties | Foreach { $hash_sessions[$_.Name] = $_.Value }
             foreach($key in $hash_sessions.Keys)
             {
-                if($key -eq "Name" -or $key -eq "UserName" -or $key -eq "Description" -or $key -eq "Id")
+                if("Name","UserName","Description","Id" -contains $key)
                 {
                     $ht_sessions[$key] = $hash_sessions[$key]
-                }
-                
+                }               
             }
             # Output result
             ConvertOutputHashTableToObject $ht_sessions         
