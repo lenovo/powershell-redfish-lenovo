@@ -143,12 +143,12 @@ function set_bmc_hostname
             
                            
         # Build request body and send request to set bmc hostname
-        $json_headers = @{"X-Auth-Token" = $session_key; "If-Match"="*"}
-        $body = @{ "HostName"=$hostname }
+        $headers = @{"X-Auth-Token" = $session_key; "If-Match" = "*"}
+        $body = @{ "HostName" = $hostname }
         $json_body = $body | convertto-json
         try
         {
-            $response = Invoke-WebRequest -Uri $target_ethernet_uri -Headers $json_headers -Method Patch  -Body $json_body -ContentType 'application/json'
+            $response = Invoke-WebRequest -Uri $target_ethernet_uri -Headers $headers -Method Patch  -Body $json_body -ContentType 'application/json'
         }
         catch
         {   
