@@ -172,7 +172,7 @@ function set_bmc_hostname
             return $False
         }
         Write-Host
-        [String]::Format("- PASS, statuscode {0} returned successfully to set bmc hostname successful",$response.StatusCode) 
+        [String]::Format("- PASS, statuscode {0} returned successfully to set bmc hostname",$response.StatusCode) 
         
         return $True
     }
