@@ -42,7 +42,7 @@ function set_bmc_ipv4
     - static_gateway: Pass in static gateway for BMC nic
     - static_mask: Pass in static mask for BMC nic
    .EXAMPLE
-    set_bmc_ipv4 -ip 10.10.10.10 -username USERID -password PASSW0RD 
+    set_bmc_ipv4 -ip 10.10.10.10 -username USERID -password PASSW0RD -dhcp_enabled 0 -static_ip 10.10.10.11 -static_gateway 10.10.10.1 -static_mask 255.255.255.0
    #>
    
     param
@@ -208,7 +208,7 @@ function set_bmc_ipv4
             $obj_cur_value = $target_ethernet_current_setting[$property]
             # type is simple(not dict/list)
             if($set_value -isnot [array] -and $set_value -isnot [hashtable]){
-                if($set_value -ne $cur_value)
+                if($set_value -ne $obj_cur_value)
                 {
                     $need_change = $True
                 }
@@ -278,7 +278,7 @@ function set_bmc_ipv4
 
                            
         # Build request body and send request to set bmc ip
-        $headers = @{"X-Auth-Token" = $session_key; "If-Match"="*"}
+        $headers = @{"X-Auth-Token" = $session_key; "If-Match" = "*"}
         $json_body = $payload | convertto-json
         try
         {           
