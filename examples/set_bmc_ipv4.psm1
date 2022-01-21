@@ -4,7 +4,7 @@
 #
 # Copyright Notice:
 #
-# Copyright 2018 Lenovo Corporation
+# Copyright 2022 Lenovo Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -120,7 +120,8 @@ function set_bmc_ipv4
             $converted_object = $response.Content | ConvertFrom-Json
             $ht_managers = @{}
             $converted_object.psobject.properties | Foreach { $ht_managers[$_.Name] = $_.Value }
-            if($ht_managers.Keys -notcontains "EthernetInterfaces"){
+            if($ht_managers.Keys -notcontains "EthernetInterfaces")
+            {
                 continue
             }
             
@@ -207,7 +208,8 @@ function set_bmc_ipv4
             $set_value = $payload[$property]
             $obj_cur_value = $target_ethernet_current_setting[$property]
             # type is simple(not dict/list)
-            if($set_value -isnot [array] -and $set_value -isnot [hashtable]){
+            if($set_value -isnot [array] -and $set_value -isnot [hashtable])
+            {
                 if($set_value -ne $obj_cur_value)
                 {
                     $need_change = $True
@@ -216,10 +218,13 @@ function set_bmc_ipv4
             # type is dict
             if($set_value -is [hashtable])
             {
-                if($obj_cur_value -is [object]){
+                if($obj_cur_value -is [object])
+                {
                     $cur_value = @{}
                     $obj_cur_value.psobject.properties | Foreach { $cur_value[$_.Name] = $_.Value }
-                }else{
+                }
+                else
+                {
                     $cur_value = $obj_cur_value
                 }
                 foreach($subprop in $set_value.keys)
@@ -250,7 +255,8 @@ function set_bmc_ipv4
                         {
                             $cur_value = @{}
                             $obj_cur_value[$i].psobject.properties | Foreach { $cur_value[$_.Name] = $_.Value }
-                        }else
+                        }
+                        else
                         {
                             $cur_value = $obj_cur_value[$i]
                         }
