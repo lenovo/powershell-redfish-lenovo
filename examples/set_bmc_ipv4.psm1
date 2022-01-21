@@ -56,6 +56,7 @@ function set_bmc_ipv4
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini",
         [Parameter(Mandatory=$True, HelpMessage="Indicates if DHCP is enabled or disabled for the bmc nic. (0:false, 1:true)")]
+        [ValidateSet("0", "1")]
         [string]$dhcp_enabled="",
         [Parameter(Mandatory=$False, HelpMessage="Indicates static ip for the manager nic. It will be ignored when dhcpenabled is set to 1")]
         [string]$static_ip="",
