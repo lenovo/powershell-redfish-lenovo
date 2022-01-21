@@ -4,7 +4,7 @@
 #
 # Copyright Notice:
 #
-# Copyright 2018 Lenovo Corporation
+# Copyright 2022 Lenovo Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -110,7 +110,8 @@ function set_bmc_hostname
             $converted_object = $response.Content | ConvertFrom-Json
             $ht_managers = @{}
             $converted_object.psobject.properties | Foreach { $ht_managers[$_.Name] = $_.Value }
-            if($ht_managers.Keys -notcontains "EthernetInterfaces"){
+            if($ht_managers.Keys -notcontains "EthernetInterfaces")
+            {
                 continue
             }
             $uri_ethernet ="https://$ip"+$converted_object.EthernetInterfaces.'@odata.id'
