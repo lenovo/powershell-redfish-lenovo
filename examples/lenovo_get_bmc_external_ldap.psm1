@@ -104,7 +104,7 @@ function lenovo_get_bmc_external_ldap
                 $ldap_client_info[$item_name] = $converted_account_service_object.LDAP.$item_name
             }
            
-            $ldap_client_info | ConvertTo-Json
+            $ldap_client_info | ConvertTo-Json -Depth 10
             return
         }
 
@@ -219,7 +219,7 @@ function lenovo_get_bmc_external_ldap
                         $ldap_client_info['ServiceAddresses'] = $ServiceAddresses
                     }
 
-                    $ldap_client_info | ConvertTo-Json
+                    $ldap_client_info | ConvertTo-Json -Depth 10
 
                     return
                 }
