@@ -167,6 +167,14 @@ function lenovo_ldap_certificate_add
         # Convert response_account_service content to hash table
         $converted_account_service_object = $response_account_service.Content | ConvertFrom-Json
         
+        if ($null -ne $converted_account_service_object.Oem)
+        {
+            if ($null -ne $converted_account_service_object.Oem.'Ami')
+            {
+                $flag_SR635_SR655 = $True
+            }
+        }
+
         if ($null -ne $converted_account_service_object.LDAP)
         {
             if ($null -ne $converted_account_service_object.LDAP.'Certificates')
@@ -174,7 +182,7 @@ function lenovo_ldap_certificate_add
                 if ($null -ne $converted_account_service_object.LDAP.'Certificates'.'@odata.id')
                 {
                     $request_url = "https://$ip" + $converted_account_service_object.LDAP.'Certificates'.'@odata.id'
-                    $request_body = @{}
+                    
                     $cert_content = read_cert_file_pem($certfile)
                     if ($null -eq $cert_content)
                     {
@@ -188,6 +196,47 @@ function lenovo_ldap_certificate_add
                         $str_cert += $i
                         $str_cert += "`n"
                     }
+                    if ($flag_SR635_SR655)
+                    {
+                        # Get the Certificates url via Invoke-WebRequest
+                        $certificates_response = Invoke-WebRequest -Uri $request_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                        
+                        # Convert certificates_response content to hash table
+                        $converted_certificates_object = $certificates_response.Content | ConvertFrom-Json
+                        $certificates_hash_table = @{}
+                        $converted_certificates_object.psobject.properties | ForEach { $certificates_hash_table[$_.Name] = $_.Value }
+
+                        # The LDAP certificate is already available in BMC, Use ReplaceCertificate action URI
+                        if ($certificates_hash_table.keys -contains "Members@odata.count" -and 
+                            $converted_certificates_object.'Members@odata.count' -gt 0)
+                        {
+                            $replace_url = '/redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate'
+                            $CertificateUri = ""
+                            if ($null -ne $converted_certificates_object.Members)
+                            {
+                                foreach ($i in $certificates_hash_table.Members)
+                                {
+                                    $CertificateUri = $i.'@odata.id'
+                                    break
+                                }
+                            }
+                            $replace_request_url = "https://$ip" + $replace_url
+                            $replace_request_body = @{}
+                            $replace_request_body['CertificateString'] = $str_cert
+                            $replace_request_body['CertificateType'] = 'PEM'
+                            $replace_request_body['CertificateUri'] = @{}
+                            $replace_request_body['CertificateUri']['@odata.id'] = $CertificateUri
+
+                            $replace_json_body = $replace_request_body | ConvertTo-Json
+
+                            # Perform post to add the certificate
+                            $replace_response = Invoke-WebRequest -Uri $replace_request_url -Method Post -Headers $JsonHeader -Body $replace_json_body -ContentType 'application/json'
+                            Write-Host
+                            [String]::Format("- PASS, statuscode {0} returned successfully to add certificate.",$replace_response.StatusCode)
+                            return $True
+                        }
+                    }
+                    $request_body = @{}
                     $request_body['CertificateString'] = $str_cert
                     $request_body['CertificateType'] = 'PEM'
                     $json_body = $request_body | ConvertTo-Json
@@ -200,19 +249,21 @@ function lenovo_ldap_certificate_add
                 }
             }
         }
-        if ($null -ne $converted_account_service_object.Oem)
-        {
-            if ($null -ne $converted_account_service_object.Oem.'Ami')
-            {
-                $flag_SR635_SR655 = $True
-            }
-        }
 
         # Add(import) certificate for SR635/SR655 using standard API with some oem properties
         if ($flag_SR635_SR655)
         {
             $request_url = "https://$ip" + '/redfish/v1/Managers/Self/RemoteAccountService/LDAP/Certificates'
-            $request_body = @{}
+            
+            # Get the Certificates url via Invoke-WebRequest
+            $certificates_response = Invoke-WebRequest -Uri $request_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            
+            # Convert certificates_response content to hash table
+            $converted_certificates_object = $certificates_response.Content | ConvertFrom-Json
+            $certificates_hash_table = @{}
+            $converted_certificates_object.psobject.properties | ForEach { $certificates_hash_table[$_.Name] = $_.Value }
+
+            # get certfile content
             $cert_content = read_cert_file_pem($certfile)
             if ($null -eq $cert_content)
             {
@@ -226,6 +277,39 @@ function lenovo_ldap_certificate_add
                 $str_cert += $i
                 $str_cert += "`n"
             }
+
+            # The LDAP certificate is already available in BMC, Use ReplaceCertificate action URI
+            if ($certificates_hash_table.keys -contains "Members@odata.count" -and 
+                $converted_certificates_object.'Members@odata.count' -gt 0)
+            {
+                $replace_url = '/redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate'
+                $CertificateUri = ""
+                if ($null -ne $converted_certificates_object.Members)
+                {
+                    foreach ($i in $certificates_hash_table.Members)
+                    {
+                        $CertificateUri = $i.'@odata.id'
+                        break
+                    }
+                }
+                $replace_request_url = "https://$ip" + $replace_url
+                $replace_request_body = @{}
+                $replace_request_body['CertificateString'] = $str_cert
+                $replace_request_body['CertificateType'] = 'PEM'
+                $replace_request_body['CertificateUri'] = @{}
+                $replace_request_body['CertificateUri']['@odata.id'] = $CertificateUri
+
+                $replace_json_body = $replace_request_body | ConvertTo-Json
+
+                # Perform post to add the certificate
+                $replace_response = Invoke-WebRequest -Uri $replace_request_url -Method Post -Headers $JsonHeader -Body $replace_json_body -ContentType 'application/json'
+                Write-Host
+                [String]::Format("- PASS, statuscode {0} returned successfully to add certificate.",$replace_response.StatusCode)
+                return $True
+            }
+
+            # For the first time to upload 
+            $request_body = @{}
             $request_body['CertificateString'] = $str_cert
             $request_body['CertificateType'] = 'PEM'
             $request_body['Oem'] = @{}
@@ -234,73 +318,8 @@ function lenovo_ldap_certificate_add
             $json_body = $request_body | ConvertTo-Json
 
             # Perform post to add the certificate
-            try
-            {
-                $response = Invoke-WebRequest -Uri $request_url -Method Post -Headers $JsonHeader -Body $json_body -ContentType 'application/json'
-            }
-            catch
-            {
-                # Handle http exception response
-                if($_.Exception.Response)
-                {
-                    if ($_.Exception.Response.StatusCode.Value__ -eq 401)
-                    {
-                        Write-Host "Error occured, error code:" $_.Exception.Response.StatusCode.Value__
-                        Write-Host "Error message: You are required to log on Web Server with valid credentials first."
-                    }
-                    elseif ($_.ErrorDetails.Message)
-                    {
-                        $response_j = $_.ErrorDetails.Message | ConvertFrom-Json | Select-Object -Expand error
-                        $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
-                        
-                        # Use ReplaceCertificate action URI
-                        $replace_url = '/redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate'
-                        if (-not $response_j.Resolution.Contains($replace_url))
-                        {
-                            Write-Host "Error occured, error code:" $_.Exception.Response.StatusCode.Value__
-                            Write-Host "Error message:" $response_j.Resolution
-                            return $False
-                        }
-
-                        # Get the Certificates url via Invoke-WebRequest
-                        $certificates_response = Invoke-WebRequest -Uri $request_url -Headers $JsonHeader -Method Get -UseBasicParsing
-
-                        # Convert certificates_response content to hash table
-                        $converted_certificates_object = $certificates_response.Content | ConvertFrom-Json
-                        $certificates_hash_table = @{}
-                        $converted_certificates_object.psobject.properties | ForEach { $certificates_hash_table[$_.Name] = $_.Value }
-                        $CertificateUri = ""
-                        if ($null -ne $converted_certificates_object.Members)
-                        {
-                            foreach ($i in $certificates_hash_table.Members)
-                            {
-                                $CertificateUri = $i.'@odata.id'
-                                break
-                            }
-                        }
-                        $replace_request_url = "https://$ip" + $replace_url
-                        $replace_request_body = @{}
-                        $replace_request_body['CertificateString'] = $str_cert
-                        $replace_request_body['CertificateType'] = 'PEM'
-                        $replace_request_body['CertificateUri'] = @{}
-                        $replace_request_body['CertificateUri']['@odata.id'] = $CertificateUri
-
-                        $replace_json_body = $replace_request_body | ConvertTo-Json
-
-                        $replace_response = Invoke-WebRequest -Uri $replace_request_url -Method Post -Headers $JsonHeader -Body $replace_json_body -ContentType 'application/json'
-                        Write-Host
-                        [String]::Format("- PASS, statuscode {0} returned successfully to add certificate.",$replace_response.StatusCode)
-                        return $True
-                    }
-                } 
-                # Handle system exception response
-                elseif($_.Exception)
-                {
-                    Write-Host "Error message:" $_.Exception.Message
-                    Write-Host "Please check arguments or server status."
-                }
-                return $False
-            }
+            $response = Invoke-WebRequest -Uri $request_url -Method Post -Headers $JsonHeader -Body $json_body -ContentType 'application/json'
+            
             Write-Host
             [String]::Format("- PASS, statuscode {0} returned successfully to add certificate.",$response.StatusCode)
             return $True
@@ -318,6 +337,10 @@ function lenovo_ldap_certificate_add
             if ($_.Exception.Response.StatusCode.Value__ -eq 401)
             {
                 Write-Host "Error message: You are required to log on Web Server with valid credentials first."
+            }
+            elseif ($_.Exception.Response.StatusCode.Value__ -eq 409)
+            {
+                Write-Host "Error message: A maximum of four certificates can be added. Delete one certificate before add."
             }
             elseif ($_.ErrorDetails.Message)
             {
