@@ -34,7 +34,7 @@ function lenovo_del_alert_recipient
     - index_id: Pass in the account index id to delete
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
-    lenovo_del_bios_boot_order -ip 10.10.10.10 -username USERID -password PASSW0RD -index_id 1
+    lenovo_del_alert_recipient -ip 10.10.10.10 -username USERID -password PASSW0RD -index_id 1
    #>
 
    param
