@@ -267,6 +267,9 @@ function lenovo_ssl_certificate_getinfo
             $ssl_cert_info | ConvertTo-Json -Depth 10
             return $True
         }
+
+        # No SSL certificate resource found
+        return "SSL certificate is not supported"
     }
     catch
     {
