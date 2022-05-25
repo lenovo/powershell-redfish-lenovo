@@ -104,7 +104,7 @@ function get_bios_bootmode
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
 
             # Get Bios resource
-            $converted_object = $response.Content | ConvertFrom-Json
+            $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
             $Bios_url = $converted_object.Bios."@odata.id"
             $uri_address_Bios = "https://$ip" + $Bios_url
             $response = Invoke-WebRequest -Uri $uri_address_Bios -Headers $JsonHeader -Method Get -UseBasicParsing

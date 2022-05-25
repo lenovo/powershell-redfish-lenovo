@@ -98,7 +98,7 @@ function get_server_boot_once_types
             # Get system resource
             $url_address_system = "https://$ip"+$system_url_string
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
+            $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
             
             # Get bios boot once information
             $boot_once_dict["BootSourceOverrideTarget@Redfish.AllowableValues"] = $converted_object."Boot"."BootSourceOverrideTarget@Redfish.AllowableValues"

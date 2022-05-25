@@ -103,7 +103,7 @@ function get_secure_boot_status
             # Get system resource
             $system_url = "https://$ip" + $system_url_string
             $response = Invoke-WebRequest -Uri $system_url  -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
+            $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
             
             # Get secure boot resource
             $secure_boot_url ="https://$ip" + $converted_object."SecureBoot"."@odata.id"

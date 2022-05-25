@@ -104,7 +104,7 @@ function enable_secure_boot
             # Get system resource
             $system_url_string = "https://$ip" + $system_url_string
             $response = Invoke-WebRequest -Uri $system_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
+            $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
 
             # get secureboot url
             $secureboot_url = "https://$ip" +  $converted_object."SecureBoot"."@odata.id"

@@ -111,7 +111,7 @@ function get_bios_attribute
             
             $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             
-            $converted_object = $response.Content | ConvertFrom-Json
+            $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
             $Bios_url = $converted_object.Bios."@odata.id"
             $uri_address_Bios = "https://$ip" + $Bios_url
             # Get Bios attributes from Bios tag

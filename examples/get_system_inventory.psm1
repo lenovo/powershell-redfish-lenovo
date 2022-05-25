@@ -103,7 +103,7 @@ function get_system_inventory
             # Get system resource
             $url_address_system = "https://$ip" + $system_url_string
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
+            $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
             $ht_system_info["HostName"] = $converted_object.HostName
             $ht_system_info["Model"] = $converted_object.Model
             $ht_system_info["SerialNumber"] = $converted_object.SerialNumber

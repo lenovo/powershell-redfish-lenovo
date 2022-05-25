@@ -102,7 +102,7 @@ function get_bios_attribute_metadata
         # Get system resource 
         $system_url_string = "https://$ip" + $converted_object.Members[0]."@odata.id"
         $response = Invoke-WebRequest -Uri $system_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-        $converted_object = $response.Content | ConvertFrom-Json
+        $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
 
         # Get metadata from bios resource instance
         $bios_url = "https://$ip" +  $converted_object.Bios."@odata.id"
@@ -111,7 +111,7 @@ function get_bios_attribute_metadata
         $Registry = $converted_object."AttributeRegistry"
 
         # Return result 
-        $Registry_url = $base_url + "\Registries\" + $Registry
+        $Registry_url = $base_url + "Registries/" + $Registry
         $response = Invoke-WebRequest -Uri $Registry_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
 

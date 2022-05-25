@@ -102,7 +102,7 @@ function get_system_reset_types
             # Get system resource
             $url_address_system = "https://$ip"+$system_url_string
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
+            $converted_object = $response.Content -replace '"AMI":','"AMIManager":'  | ConvertFrom-Json
             
             if($converted_object."Actions"."#ComputerSystem.Reset"."ResetType@Redfish.AllowableValues" -ne $null)
             {
