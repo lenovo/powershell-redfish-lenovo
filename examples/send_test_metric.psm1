@@ -85,7 +85,7 @@ function send_test_metric
         # Build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key }
     
-        # Get the manager url collection
+        # Get the TelemetryService resource
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
