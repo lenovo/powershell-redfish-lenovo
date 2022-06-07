@@ -50,10 +50,6 @@ function lenovo_generate_snmp_engineid{
         [Parameter(Mandatory=$False)]
         [string]$password="",
         [Parameter(Mandatory=$False)]
-        [string]$bios_password_name="",
-        [Parameter(Mandatory=$False)]
-        [string]$bios_password="",
-        [Parameter(Mandatory=$False)]
         [string]$system_id="None",
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
