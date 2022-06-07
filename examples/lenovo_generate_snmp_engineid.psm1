@@ -94,9 +94,9 @@ function lenovo_generate_snmp_engineid{
         $system_url_collection = @()
         $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
 
-        $sub_model = $Null
-        $serial_number = $Null
-        $host_name = $Null
+        $sub_model = $null
+        $serial_number = $null
+        $host_name = $null
         # loop all system resource instance in system url collection
         foreach($system_url_string in $system_url_collection)
         {
@@ -122,11 +122,11 @@ function lenovo_generate_snmp_engineid{
             }
 
             $engine_id_string = ""
-            if($sub_model -ne $Null -and $serial_number -ne $Null)
+            if($sub_model -ne $null -and $serial_number -ne $null)
             {
                 $engine_id_string = [String]::Format("XCC-{0}-{1}", $sub_model, $serial_number)
             }
-            elseif($host_name -ne $Null)
+            elseif($host_name -ne $null)
             {
                 $engine_id_string = $host_name
             }
