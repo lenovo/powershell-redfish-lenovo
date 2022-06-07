@@ -29,9 +29,9 @@ Import-module $PSScriptRoot\lenovo_utils.psm1
 function lenovo_generate_snmp_engineid{
    <#
    .Synopsis
-    Cmdlet used to set BIOS password
+    Cmdlet used to generate Lenovo SNMP engine id
    .DESCRIPTION
-    Cmdlet used to set BIOS password using Redfish API
+    Cmdlet used to generate Lenovo SNMP engine id using Redfish API
     Connection information can be specified via command parameter or configuration file
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
