@@ -133,27 +133,44 @@ function lenovo_delete_bmc_user
         $response = Invoke-WebRequest -Uri $url_dest -Headers $JsonHeader -Method Get -UseBasicParsing 
         $converted_object = $response.Content | ConvertFrom-Json
 
-        if($converted_object.'@odata.etag' -ne $null)
-        {
-            $JsonHeader = @{ "If-Match" = $converted_object.'@odata.etag'
-            "X-Auth-Token" = $session_key
-            }
-            $JsonBody = @{"UserName"=""
-                    "Enabled" = $false
-                } | ConvertTo-Json -Compress
+        # Check user delete mode
+        $delete_mode = "DELETE_Action"
+        if (!$response.Headers['Allow'].contains('DELETE')) {
+            $delete_mode = "PATCH_Action"
         }
-        else
-        {
-            $JsonHeader = @{ "If-Match" = ""
-            "X-Auth-Token" = $session_key
+
+        # For SR635/SR655 products
+        if ($delete_mode -eq "DELETE_Action") {
+            $JsonHeader = @{ "If-Match" = "*"
+            "X-Auth-Token" = $session_key}
+            $response = Invoke-WebRequest -Uri $url_dest -Method Delete -Headers $JsonHeader -ContentType 'application/json'
+            Write-Host
+                    [String]::Format("- PASS, statuscode {0} returned successfully to delete account {1}",$response.StatusCode,$delusername)
+        }
+
+        if ($delete_mode -eq "PATCH_Action") {
+            if($converted_object.'@odata.etag' -ne $null)
+            {
+                $JsonHeader = @{ "If-Match" = $converted_object.'@odata.etag'
+                "X-Auth-Token" = $session_key
                 }
-            $JsonBody = @{"UserName"=""
-                    "Enabled" = $false
-                } | ConvertTo-Json -Compress
+                $JsonBody = @{"UserName"=""
+                        "Enabled" = $false
+                    } | ConvertTo-Json -Compress
+            }
+            else
+            {
+                $JsonHeader = @{ "If-Match" = ""
+                "X-Auth-Token" = $session_key
+                    }
+                $JsonBody = @{"UserName"=""
+                        "Enabled" = $false
+                    } | ConvertTo-Json -Compress
+            }
+            $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
+            Write-Host
+                    [String]::Format("- PASS, statuscode {0} returned successfully to delete account {1}",$response.StatusCode,$delusername)
         }
-        $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-        Write-Host
-                [String]::Format("- PASS, statuscode {0} returned successfully to delete account {1}",$response.StatusCode,$newusername)
     }
     catch
     {
