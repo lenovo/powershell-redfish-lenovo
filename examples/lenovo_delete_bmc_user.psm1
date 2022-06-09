@@ -138,7 +138,6 @@ function lenovo_delete_bmc_user
         if (!$response.Headers['Allow'].contains('DELETE')) {
             $delete_mode = "PATCH_Action"
         }
-
         if ($delete_mode -eq "PATCH_Action") {
             if($converted_object.'@odata.etag' -ne $null)
             {
@@ -162,7 +161,6 @@ function lenovo_delete_bmc_user
             Write-Host
                     [String]::Format("- PASS, statuscode {0} returned successfully to delete account {1}",$response.StatusCode,$delusername)
         }
-
         # For SR635/SR655 products
         if ($delete_mode -eq "DELETE_Action") {
             $JsonHeader = @{ "If-Match" = "*"
