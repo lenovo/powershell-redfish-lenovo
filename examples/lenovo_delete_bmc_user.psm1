@@ -138,7 +138,6 @@ function lenovo_delete_bmc_user
             $JsonHeader = @{ "If-Match" = $converted_object.'@odata.etag'
             "X-Auth-Token" = $session_key
             }
-
             $JsonBody = @{"UserName"=""
                     "Enabled" = $false
                 } | ConvertTo-Json -Compress
@@ -148,7 +147,6 @@ function lenovo_delete_bmc_user
             $JsonHeader = @{ "If-Match" = ""
             "X-Auth-Token" = $session_key
                 }
-
             $JsonBody = @{"UserName"=""
                     "Enabled" = $false
                 } | ConvertTo-Json -Compress
