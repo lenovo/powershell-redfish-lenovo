@@ -139,15 +139,6 @@ function lenovo_delete_bmc_user
             $delete_mode = "PATCH_Action"
         }
 
-        # For SR635/SR655 products
-        if ($delete_mode -eq "DELETE_Action") {
-            $JsonHeader = @{ "If-Match" = "*"
-            "X-Auth-Token" = $session_key}
-            $response = Invoke-WebRequest -Uri $url_dest -Method Delete -Headers $JsonHeader -ContentType 'application/json'
-            Write-Host
-                    [String]::Format("- PASS, statuscode {0} returned successfully to delete account {1}",$response.StatusCode,$delusername)
-        }
-
         if ($delete_mode -eq "PATCH_Action") {
             if($converted_object.'@odata.etag' -ne $null)
             {
@@ -171,6 +162,17 @@ function lenovo_delete_bmc_user
             Write-Host
                     [String]::Format("- PASS, statuscode {0} returned successfully to delete account {1}",$response.StatusCode,$delusername)
         }
+
+        # For SR635/SR655 products
+        if ($delete_mode -eq "DELETE_Action") {
+            $JsonHeader = @{ "If-Match" = "*"
+            "X-Auth-Token" = $session_key}
+            $response = Invoke-WebRequest -Uri $url_dest -Method Delete -Headers $JsonHeader -ContentType 'application/json'
+            Write-Host
+                    [String]::Format("- PASS, statuscode {0} returned successfully to delete account {1}",$response.StatusCode,$delusername)
+        }
+
+
     }
     catch
     {
