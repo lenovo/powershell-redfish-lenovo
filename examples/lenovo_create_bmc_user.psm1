@@ -108,7 +108,7 @@ function lenovo_create_bmc_user
         $converted_object = $response.Content | ConvertFrom-Json
 
         $create_mode = "POST_Action"
-        if(9 -ge ($converted_object."Members@odata.count") -le 12)
+        if(!$response.Headers['Allow'].contains('POST'))
         {
             $create_mode = "PATCH_Action"
         }
@@ -135,6 +135,7 @@ function lenovo_create_bmc_user
                 "Name"=$newusername
                 "UserName"=$newusername
                 "RoleId"=$role_name
+                "Enabled" = $true
                 } | ConvertTo-Json -Compress
 
             $response = Invoke-WebRequest -Uri $url_accounts -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
