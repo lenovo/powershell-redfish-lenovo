@@ -45,9 +45,9 @@ function mount_virtual_media
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
     Example of HTTP/NFS:
-    "mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD --fsprotocol HTTP --fsip 10.10.10.11 --fsdir /fspath/ --image isoname.img"
-    Example of SFTP/FTP/Samba:
-    "mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD --fsprotocol SFTP --fsip 10.10.10.11 --fsusername mysftp --fspassword mypass --fsdir /fspath/ --image isoname.img"
+    "mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD -fsprotocol HTTP -fsip 10.10.10.11 -fsdir /fspath/ -image isoname.img"
+    Example of CIFS:
+    "mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD -fsprotocol CIFS -fsip 10.10.10.11 -fsusername mycifs -fspassword mypass -fsdir /fspath/ -image isoname.img"
    #>
     
    
@@ -59,7 +59,7 @@ function mount_virtual_media
         [string]$username="",
         [Parameter(Mandatory=$False)]
         [string]$password="",
-        [Parameter(Mandatory=$False)]
+        [Parameter(Mandatory=$False, HelpMessage='Specify the file server protocol. Support: ["NFS", "HTTP", "HTTPS", "CIFS"]')]
         [string]$fsprotocol="",
         [Parameter(Mandatory=$True)]
         [string]$image="",
@@ -67,6 +67,10 @@ function mount_virtual_media
         [string]$fsip="",
         [Parameter(Mandatory=$False)]
         [string]$fsport="",
+        [Parameter(Mandatory=$False)]
+        [string]$fsusername="",
+        [Parameter(Mandatory=$False)]
+        [string]$fspassword="",
         [Parameter(Mandatory=$False)]
         [string]$fsdir="",
         [Parameter(Mandatory=$False)]
@@ -167,6 +171,12 @@ function mount_virtual_media
             $converted_object = $response.Content | ConvertFrom-Json
             $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
 
+            # For the latest XCC Firmware(version is 2.5 and above), there are 10 predefined members
+            if ($uri_virtual_media -eq "")
+            {
+                continue
+            }
+
             # Get the virtual media response resource
             $response = Invoke-WebRequest -Uri $uri_virtual_media -Credential $bmc_credential -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
@@ -200,6 +210,7 @@ function mount_virtual_media
                 }
                 $fsprotocol = $fsprotocol.ToLower()
 
+                # Mount virtual media via patch
                 if($hash_table.Id -match "EXT")
                 {
                     if($Null -eq $hash_table.ImageName)
@@ -208,7 +219,10 @@ function mount_virtual_media
                         {
                             $image_uri = $fsip + $fsport + ":" + $fsdir + "/" + $image
                         }
-                        else 
+                        elseif ($fsprotocol -eq "cifs") {
+                            $image_uri = "//" + $fsip + $fsport + $fsdir + "/" + $image
+                        }
+                        else
                         {
                             $image_uri = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image
                         }
@@ -217,6 +231,11 @@ function mount_virtual_media
                         $body["Image"] = $image_uri
                         $body["WriteProtected"] = [bool]$writeprotected
                         $body["Inserted"] = [bool]$inserted
+                        if ($fsprotocol -eq "cifs") {
+                            $body["TransferProtocolType"] = $fsprotocol.ToUpper()
+                            $body["UserName"] = $fsusername
+                            $body["Password"] = $fspassword
+                        }
                         $json_body = $body | convertto-json
 
 
@@ -224,7 +243,7 @@ function mount_virtual_media
                         $response = Invoke-WebRequest -Uri $virtual_media_member_uri -Credential $bmc_credential -Method Patch -Body $json_body -ContentType 'application/json'
 
                         Write-Host
-                        [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode) 
+                        [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
                         return $True
                     }
                     else
