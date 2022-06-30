@@ -164,10 +164,50 @@ function restart_bmc
             }
 
             $response = Invoke-WebRequest -Uri $uri_restart_manager -Headers $JsonHeader -Method Post -Body $JsonBody -ContentType 'application/json'
+            
+            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 204)
+            {
+                Write-Host
+                [String]::Format("- PASS, statuscode {0} returned successfully to restart manager",$response.StatusCode)
+                return $True
+            }
+            elseif ($response.StatusCode -eq 202)
+            {
+                $converted_object = $response.Content | ConvertFrom-Json
+                $task_uri = "https://$ip" + $converted_object.'@odata.id'
+                
+                $result = task_monitor $session_key $task_uri
 
-            Write-Host
-            [String]::Format("- PASS, statuscode {0} returned successfully to restart manager",$response.StatusCode)
-
+                # Delete the task when the task state is completed without any warning
+                $severity = ''
+                if ($result.ret -eq $True -and $result.task_state -eq "Completed" -and $result.msg -ne '')
+                {
+                    if ($null -ne $result.msg.'Severity')
+                    {
+                        $severity = $result.msg.'Severity'
+                    }
+                }
+                if ($result.ret -eq $True -and $result.task_state -eq "Completed" -and ($result.msg -eq '' -or $severity -eq "OK"))
+                {
+                    $response_deltask = Invoke-WebRequest -Uri $task_uri -Headers $JsonHeader -Method Delete -UseBasicParsing
+                }
+                if ($result.ret -eq $True)
+                {
+                    $task_state = $result.task_state
+                    if ($task_state -eq "Completed")
+                    {
+                        Write-Host
+                        [String]::Format("- PASS, Restart BMC successfully. Messages: {0}", $result.msg.Message) 
+                        return $True
+                    }
+                    else
+                    {
+                        Write-Host
+                        [String]::Format("Failed to restart BMC. Messages: {0}", $result.msg.Message) 
+                        return $False
+                    }
+                }
+            }
         }
         
         return $True
