@@ -141,39 +141,93 @@ function set_bmc_hostname
             Write-Host "No matched EthernetInterface found under Manager"
             return $False
         }
+
+        #Check that the hostname you want to set is the same as it is now
+        if ($converted_object.HostName -eq $hostname)
+        {
+            Write-Host "The hostname to be set is the same as the current"
+            return $False
+        }
             
-                           
         # Build request body and send request to set bmc hostname
         $headers = @{"X-Auth-Token" = $session_key; "If-Match" = "*"}
         $body = @{ "HostName" = $hostname }
         $json_body = $body | convertto-json
-        try
+        
+        $response = Invoke-WebRequest -Uri $target_ethernet_uri -Headers $headers -Method Patch  -Body $json_body -ContentType 'application/json'
+       
+        if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 204)
         {
-            $response = Invoke-WebRequest -Uri $target_ethernet_uri -Headers $headers -Method Patch  -Body $json_body -ContentType 'application/json'
+            Write-Host
+            [String]::Format("- PASS, statuscode {0} returned successfully to set bmc hostname to {1}",$response.StatusCode, $hostname) 
+            return $True
         }
-        catch
-        {   
-            # Handle http exception response for Post request
-            if ($_.Exception.Response)
+        elseif ($response.StatusCode -eq 202)
+        {
+            $converted_object = $response.Content | ConvertFrom-Json
+            $task_uri = "https://$ip" + $converted_object.'@odata.id'
+            while($True)
             {
-                Write-Host "Error occured, status code:" $_.Exception.Response.StatusCode.Value__
-                if($_.ErrorDetails.Message)
+                try
                 {
-                    $response_j = $_.ErrorDetails.Message | ConvertFrom-Json | Select-Object -Expand error
-                    $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
-                    Write-Host "Error message:" $response_j.Resolution
+                    $result = task_monitor $session_key $task_uri
+                    break
+                }
+                catch
+                {
+                    if($_.Exception.Response -and $_.Exception.Response.StatusCode.Value__ -eq 401)
+                    {
+                        while($True)
+                        {
+                            # Get the base url
+                            $response_base_url = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                            if ($response_base_url.StatusCode -eq 200)
+                            {
+                                # Create session
+                                $session = create_session -ip $ip -username $username -password $password
+                                $session_key = $session.'X-Auth-Token'
+
+                                # Build headers with sesison key for authentication
+                                $JsonHeader = @{ "X-Auth-Token" = $session_key }
+                                break
+                            }
+                            Start-Sleep -m 1000
+                        }
+                    }
+                    Start-Sleep -m 1000
+                    continue
                 }
             }
-            # Handle system exception response for Post request
-            elseif($_.Exception)
+            # Delete the task when the task state is completed without any warning
+            $severity = ''
+            if ($result.ret -eq $True -and $result.task_state -eq "Completed" -and $result.msg -ne '')
             {
-                Write-Host "Error message:" $_.Exception.Message
-                Write-Host "Please check arguments or server status."
+                if ($null -ne $result.msg.'Severity')
+                {
+                    $severity = $result.msg.'Severity'
+                }
             }
-            return $False
+            if ($result.ret -eq $True -and $result.task_state -eq "Completed"-and ($result.msg -eq '' -or $severity -eq "OK"))
+            {
+                $response_deltask = Invoke-WebRequest -Uri $task_uri -Headers $JsonHeader -Method Delete -UseBasicParsing
+            }
+            if ($result.ret -eq $True)
+            {
+                $task_state = $result.task_state
+                if ($task_state -eq "Completed")
+                {
+                    Write-Host
+                    [String]::Format("- PASS, Set BMC host name {0} successfully. Messages: {1}", $hostname, $result.msg.Message) 
+                    return $True
+                }
+                else
+                {
+                    Write-Host
+                    [String]::Format("Failed to set BMC host name {0}. Messages: {1}", $hostname, $result.msg.Message) 
+                    return $False
+                }
+            }
         }
-        Write-Host
-        [String]::Format("- PASS, statuscode {0} returned successfully to set bmc hostname",$response.StatusCode) 
         
         return $True
     }
