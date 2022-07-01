@@ -35,7 +35,7 @@ function mount_virtual_media
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
     - password: Pass in BMC username password
-    - fsprotocol: Specifies the protocol prefix for uploading image or ISO
+    - fsprotocol: Specify the protocol for uploading image or ISO
     - image: Mount virtual media name
     - fsip: Specify the file server ip
     - fsport: Specify the port number used by protocol
@@ -59,7 +59,7 @@ function mount_virtual_media
         [string]$username="",
         [Parameter(Mandatory=$False)]
         [string]$password="",
-        [Parameter(Mandatory=$False, HelpMessage='Specify the file server protocol. Support: ["NFS", "HTTP", "HTTPS", "CIFS"]')]
+        [Parameter(Mandatory=$False, HelpMessage='Specify the protocol for uploading image or ISO. Support: ["NFS", "HTTP", "HTTPS", "CIFS"]')]
         [string]$fsprotocol="",
         [Parameter(Mandatory=$True)]
         [string]$image="",

@@ -37,7 +37,7 @@ function lenovo_mount_virtual_media
     - password: Pass in BMC username password
     - image: Mount virtual media name
     - mounttype: Types of mount virtual media
-    - fsprotocol: Specifies the protocol prefix for uploading image or ISO
+    - fsprotocol: Specify the protocol for uploading image or ISO
     - fsip: Specify the file server ip
     - fsport: 
     - fsusername: Username to access the file path, available for Samba, NFS, HTTP, SFTP/FTP
@@ -69,7 +69,7 @@ function lenovo_mount_virtual_media
         [string]$image="",
         [Parameter(Mandatory=$False)]
         [string]$mounttype="Network",
-        [Parameter(Mandatory=$False, HelpMessage='Specifies the protocol prefix for uploading image or ISO. Support:["Samba", "NFS", "CIFS", "HTTP", "HTTPS", "SFTP", "FTP"].')]
+        [Parameter(Mandatory=$False, HelpMessage='Specify the protocol for uploading image or ISO. Support:["Samba", "NFS", "CIFS", "HTTP", "HTTPS", "SFTP", "FTP"].')]
         [string]$fsprotocol="",
         [Parameter(Mandatory=$False)]
         [string]$fsip="",
