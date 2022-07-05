@@ -81,40 +81,49 @@ function get_virtual_media
 
         $JsonHeader = @{"X-Auth-Token" = $session_key}
     
-        # Get the manager url collection
-        $manager_url_collection = @()
+        # Get the manager/system url collection
+        $root_urls = @()
+        $root_urls_collection = @()
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
+        # Get base url response
+        $managers_url = "https://$ip" + $converted_object.Managers."@odata.id"
+        $systems_url = "https://$ip" + $converted_object.Systems."@odata.id"
+        $root_urls += $managers_url
+        $root_urls += $systems_url
 
-        
-        $managers_url = $converted_object.Managers."@odata.id"
-        $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
+        foreach ($root_url in $root_urls) {
+            $response = Invoke-WebRequest -Uri $root_url -Headers $JsonHeader -Method Get -UseBasicParsing
     
-        # Convert response content to hash table
-        $converted_object = $response.Content | ConvertFrom-Json
-        $hash_table = @{}
-        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-        
-        # Set the $manager_url_collection
-        foreach ($i in $hash_table.Members)
-        {
-            $i = [string]$i
-            $manager_url_string = ($i.Split("=")[1].Replace("}",""))
-            $manager_url_collection += $manager_url_string
+            # Convert response content to hash table
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+            # Set the $root_urls_collection
+            foreach ($i in $hash_table.Members)
+            {
+                $i = [string]$i
+                $url_string = ($i.Split("=")[1].Replace("}",""))
+                $root_urls_collection += $url_string
+            }
         }
 
-        # Loop all Manager resource instance in $manager_url_collection
-        foreach ($manager_url_string in $manager_url_collection)
+        # Loop all Manager/System resource instance in $root_urls_collection
+        foreach ($url_string in $root_urls_collection)
         {
-        
-            # Get servicedata uri from the Manager resource instance
-            $uri_address_manager = "https://$ip" + $manager_url_string
+
+            # Get servicedata uri from the Manager/System resource instance
+            $uri_address_manager = "https://$ip" + $url_string
 
             # Get the virtual media url
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
+            if (!$converted_object."VirtualMedia")
+            {
+                continue
+            }
             $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
 
             # Get the virtual media response resource

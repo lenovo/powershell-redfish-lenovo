@@ -157,248 +157,272 @@ function lenovo_mount_virtual_media
 
         # $JsonHeader = @{"X-Auth-Token" = $session_key}
     
-        # Get the manager url collection
-        $manager_url_collection = @()
+        # Get the manager/system url collection
+        $root_urls = @()
+        $root_urls_collection = @()
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Credential $bmc_credential -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
 
-        
-        $managers_url = $converted_object.Managers."@odata.id"
-        $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Credential $bmc_credential -Method Get -UseBasicParsing  
+
+        $managers_url = "https://$ip" + $converted_object.Managers."@odata.id"
+        $systems_url = "https://$ip" + $converted_object.Systems."@odata.id"
+        $root_urls += $managers_url
+        $root_urls += $systems_url
+
+        foreach ($root_url in $root_urls) {
+            $response = Invoke-WebRequest -Uri $root_url -Credential $bmc_credential -Method Get -UseBasicParsing
     
-        # Convert response content to hash table
-        $converted_object = $response.Content | ConvertFrom-Json
-        $hash_table = @{}
-        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-        
-        # Set the $manager_url_collection
-        foreach ($i in $hash_table.Members)
-        {
-            $i = [string]$i
-            $manager_url_string = ($i.Split("=")[1].Replace("}",""))
-            $manager_url_collection += $manager_url_string
-        }
-
-        # Loop all Manager resource instance in $manager_url_collection
-        foreach ($manager_url_string in $manager_url_collection)
-        {
-        
-            # Get servicedata uri from the Manager resource instance
-            $uri_address_manager = "https://$ip" + $manager_url_string
-
-            # Get the virtual media url
-            $response = Invoke-WebRequest -Uri $uri_address_manager -Credential $bmc_credential -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-            $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
-
-            $uri_remote_map ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteMap"."@odata.id"
-            $uri_remote_control ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteControl"."@odata.id"
-
-            # Get the virtual media response resource
-            $response = Invoke-WebRequest -Uri $uri_virtual_media -Credential $bmc_credential -Method Get -UseBasicParsing
+            # Convert response content to hash table
             $converted_object = $response.Content | ConvertFrom-Json
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
 
-            $members_count = $hash_table."Members@odata.count"
-            if($members_count -eq 0)
+            # Set the root_urls_collection
+            foreach ($i in $hash_table.Members)
             {
-                Write-Host "This server doesn't mount virtual media."
+                $i = [string]$i
+                $url_string = ($i.Split("=")[1].Replace("}",""))
+                $root_urls_collection += $url_string
             }
+        }
 
-            if($fsport -ne "")
-            {
-                $fsport = ":" + $fsport
-            }
-            if($fsdir -ne "")
-            {
-                $fsdir = "/" + $fsdir.Trim("/")
-            }
-            $protocol = $fsprotocol.ToLower()
-            $fsprotocol = $fsprotocol.ToLower()
+        $uri_virtual_media = ""
+        $response_manager_url = ""
+        # Loop all Manager/System resource instance in $root_urls_collection
+        foreach ($url_string in $root_urls_collection)
+        {
 
-            if($fsprotocol -eq "samba")
-            {
-                $source_url = "smb://" + $fsip + $fsport + $fsdir + "/" + $image
-            }
-            else
-            {
-                $source_url = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image    
-            }
+            # Get servicedata uri from the Manager/System resource instance
+            $uri_address_manager = "https://$ip" + $url_string
 
-            if($mounttype -eq "Network")
+            # Get the virtual media url
+            $response = Invoke-WebRequest -Uri $uri_address_manager -Credential $bmc_credential -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            # Get the virtual media url from the manager/system response
+            if ($converted_object."VirtualMedia")  {
+                $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
+            }
+            # Get manager response
+            if ($converted_object."Oem")  {
+                if ($converted_object."Oem"."Lenovo") {
+                    if ($converted_object."Oem"."Lenovo"."RemoteControl") {
+                        $response_manager_url = $converted_object
+                    }
+                }
+            }
+            if ($uri_virtual_media -eq "" -or $response_manager_url -eq "") {
+                continue
+            }
+        }
+
+        # Get mount media iso url
+        # XCC Mount VirtualMedia
+        $uri_remote_map ="https://$ip" + $response_manager_url."Oem"."Lenovo"."RemoteMap"."@odata.id"
+        $uri_remote_control ="https://$ip" + $response_manager_url."Oem"."Lenovo"."RemoteControl"."@odata.id"
+
+        # Get the virtual media response resource
+        $response = Invoke-WebRequest -Uri $uri_virtual_media -Credential $bmc_credential -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+        $hash_table = @{}
+        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+        $members_count = $hash_table."Members@odata.count"
+        if($members_count -eq 0)
+        {
+            Write-Host "This server doesn't mount virtual media."
+        }
+
+        if($fsport -ne "")
+        {
+            $fsport = ":" + $fsport
+        }
+        if($fsdir -ne "")
+        {
+            $fsdir = "/" + $fsdir.Trim("/")
+        }
+        $protocol = $fsprotocol.ToLower()
+        $fsprotocol = $fsprotocol.ToLower()
+
+        if($fsprotocol -eq "samba")
+        {
+            $source_url = "smb://" + $fsip + $fsport + $fsdir + "/" + $image
+        }
+        else
+        {
+            $source_url = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image
+        }
+
+        if($mounttype -eq "Network")
+        {
+            if($members_count -eq 10)
             {
-                if($members_count -eq 10)
+                if(@("nfs", "http", "https", "cifs") -contains $fsprotocol)
                 {
-                    if(@("nfs", "http", "https", "cifs") -contains $fsprotocol)
+                    # mount_virtual_media
+                    # Loop all the virtual media members and get all the virtual media informations
+                    foreach($i in $hash_table.Members)
                     {
-                        # mount_virtual_media
-                        # Loop all the virtual media members and get all the virtual media informations
-                        foreach($i in $hash_table.Members)
+                        $virtual_media_x_url = "https://$ip" + $i."@odata.id"
+                        # Get the virtual media response resource
+                        $response = Invoke-WebRequest -Uri $virtual_media_x_url -Credential $bmc_credential -Method Get -UseBasicParsing
+                        $converted_object = $response.Content | ConvertFrom-Json
+                        $hash_table = @{}
+                        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+                        if($hash_table.Id -match "EXT")
                         {
-                            $virtual_media_x_url = "https://$ip" + $i."@odata.id"
-                            # Get the virtual media response resource
-                            $response = Invoke-WebRequest -Uri $virtual_media_x_url -Credential $bmc_credential -Method Get -UseBasicParsing
-                            $converted_object = $response.Content | ConvertFrom-Json
-                            $hash_table = @{}
-                            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-
-                            if($hash_table.Id -match "EXT")
+                            if($Null -eq $hash_table.ImageName)
                             {
-                                if($Null -eq $hash_table.ImageName)
+                                if($fsprotocol -eq "nfs")
                                 {
-                                    if($fsprotocol -eq "nfs")
-                                    {
-                                        $image_uri = $fsip + $fsport + ":" + $fsdir + "/" + $image
-                                    }
-                                    elseif ($fsprotocol -eq "cifs") {
-                                        $image_uri = "//" + $fsip + $fsport + $fsdir + "/" + $image
-                                    }
-                                    else
-                                    {
-                                        $image_uri = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image
-                                    }
-
-                                    $body = @{}
-                                    $body["Image"] = $image_uri
-                                    $body["WriteProtected"] = [bool]$writeprotected
-                                    $body["Inserted"] = [bool]$inserted
-                                    if ($fsprotocol -eq "cifs") {
-                                        $body["TransferProtocolType"] = $fsprotocol.ToUpper()
-                                        $body["UserName"] = $fsusername
-                                        $body["Password"] = $fspassword
-                                    }
-                                    $json_body = $body | convertto-json
-
-                                    $virtual_media_member_uri = "https://$ip" + $hash_table."@odata.id"
-                                    $response = Invoke-WebRequest -Uri $virtual_media_member_uri -Credential $bmc_credential -Method Patch -Body $json_body -ContentType 'application/json'
-
-                                    Write-Host
-                                    [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode) 
-                                    return $True
+                                    $image_uri = $fsip + $fsport + ":" + $fsdir + "/" + $image
+                                }
+                                elseif ($fsprotocol -eq "cifs") {
+                                    $image_uri = "//" + $fsip + $fsport + $fsdir + "/" + $image
                                 }
                                 else
                                 {
-                                    continue    
+                                    $image_uri = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image
                                 }
+
+                                $body = @{}
+                                $body["Image"] = $image_uri
+                                $body["WriteProtected"] = [bool]$writeprotected
+                                $body["Inserted"] = [bool]$inserted
+                                if ($fsprotocol -eq "cifs") {
+                                    $body["TransferProtocolType"] = $fsprotocol.ToUpper()
+                                    $body["UserName"] = $fsusername
+                                    $body["Password"] = $fspassword
+                                }
+                                $json_body = $body | convertto-json
+
+                                $virtual_media_member_uri = "https://$ip" + $hash_table."@odata.id"
+                                $response = Invoke-WebRequest -Uri $virtual_media_member_uri -Credential $bmc_credential -Method Patch -Body $json_body -ContentType 'application/json'
+
+                                Write-Host
+                                [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
+                                return $True
                             }
-                            
+                            else
+                            {
+                                continue
+                            }
                         }
-                        $result = "Up to 4 files can be concurrently mounted to the server by the BMC."
-                        $result
-                        return $False
-                    }
-                    else
-                    {
-                        $result = "For remote mounts, only HTTP, HTTPS, CIFS and NFS(no credential required) protocols are supported."
-                        $result
-                        return $False
-                    }
-                }
-                else 
-                {
-                    # umount_virtual_from_network
-                    # Get MountImages url from remote map resource instance
-                    $response = Invoke-WebRequest -Uri $uri_remote_map -Credential $bmc_credential -Method Get -UseBasicParsing
-                    $converted_object = $response.Content | ConvertFrom-Json
-                    $hash_table = @{}
-                    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                    $images_member_uri = "https://$ip" + $hash_table.MountImages."@odata.id"
 
-                    $body = @{}
-
-                    if($fsprotocol -eq "nfs")
-                    {
-                        $body["FilePath"] = $fsip + $fsport + ":" + $fsdir + "/" + $image
                     }
-                    elseif($fsprotocol -eq "samba")
-                    {
-                        $body["FilePath"] = "//" + $fsip + $fsport + $fsdir + "/" + $image
-                    }
-                    elseif(($fsprotocol -eq "sftp") -or ($fsprotocol -eq "ftp") -or ($fsprotocol -eq "http"))
-                    {
-                        $body["FilePath"] = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image
-                    }
-                    else
-                    {
-                        $result = "Mount media iso network only support protocol Samba, NFS, HTTP, SFTP/FTP."
-                        $result
-                        return $False    
-                    }
-
-                    $body["Type"] = $fsprotocol
-                    $body["Username"] = $fsusername
-                    $body["Password"] = $fspassword
-                    $body["Domain"] = $domain
-                    $body["Readonly"] = [bool]$readonly
-                    $body["Options"] = $options
-                    $json_body = $body | convertto-json
-
-                    $response = Invoke-WebRequest -Uri $images_member_uri -Credential $bmc_credential -Method Post -Body $json_body -ContentType 'application/json'
-                    Write-Host
-                    [String]::Format("- PASS, statuscode {0} returned to add image member successful",$response.StatusCode)
-                    
-                    $mount_image_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteMapService.Mount"."target"
-                    $response = Invoke-WebRequest -Uri $mount_image_url -Credential $bmc_credential -Method Post -ContentType 'application/json'
-                    Write-Host
-                    [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
-                }
-            }
-            else 
-            {
-                # mount_virtual_media_from_rdoc
-                # Get MountImages url from remote map resource instance
-                $response = Invoke-WebRequest -Uri $uri_remote_control -Credential $bmc_credential -Method Get -UseBasicParsing
-                $converted_object = $response.Content | ConvertFrom-Json
-                $hash_table = @{}
-                $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                $upload_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteControlService.UploadFromURL"."target"
-
-                # Get AllowableValues of protocol
-                $allow_protocols = $hash_table.Actions."#LenovoRemoteControlService.UploadFromURL"."Type@Redfish.AllowableValues"
-                if ($allow_protocols -notcontains $protocol) {
-                    $allow_protocols = $allow_protocols | ConvertTo-Json
-                    Write-Host
-                    [String]::Format("For remote mounting of RDOC images, supported protocol list: {0}.",$allow_protocols)
+                    $result = "Up to 4 files can be concurrently mounted to the server by the BMC."
+                    $result
                     return $False
                 }
-
-                if($fsprotocol -eq "samba")
+                else
                 {
-                    $fsprotocol = "smb"
+                    $result = "For remote mounts, only HTTP, HTTPS, CIFS and NFS(no credential required) protocols are supported."
+                    $result
+                    return $False
                 }
-
-                $body = @{
-                    "sourceURL" = $source_url;
-                    "Username" = $fsusername;
-                    "Password" = $fspassword;
-                    "Type" = $fsprotocol.ToUpper();
-                    "Readonly" = [bool]$readonly;
-                    "Domain" = $domain;
-                    "Option" = $options
-                }
-                $json_body = $body | convertto-json
-
-                $response = Invoke-WebRequest -Uri $upload_url -Credential $bmc_credential -Method Post -Body $json_body -ContentType 'application/json'
-                Write-Host
-                [String]::Format("- PASS, statuscode {0} returned to upload media iso successful, next will mount media iso...",$response.StatusCode)
-
+            }
+            else
+            {
+                # mount_virtual_from_network
                 # Get MountImages url from remote map resource instance
                 $response = Invoke-WebRequest -Uri $uri_remote_map -Credential $bmc_credential -Method Get -UseBasicParsing
                 $converted_object = $response.Content | ConvertFrom-Json
                 $hash_table = @{}
                 $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                $mount_image_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteMapService.Mount"."target"
+                $images_member_uri = "https://$ip" + $hash_table.MountImages."@odata.id"
 
-                $body = @{""=""}
+                $body = @{}
+
+                if($fsprotocol -eq "nfs")
+                {
+                    $body["FilePath"] = $fsip + $fsport + ":" + $fsdir + "/" + $image
+                }
+                elseif($fsprotocol -eq "samba")
+                {
+                    $body["FilePath"] = "//" + $fsip + $fsport + $fsdir + "/" + $image
+                }
+                elseif(($fsprotocol -eq "sftp") -or ($fsprotocol -eq "ftp") -or ($fsprotocol -eq "http"))
+                {
+                    $body["FilePath"] = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image
+                }
+                else
+                {
+                    $result = "Mount media iso network only support protocol Samba, NFS, HTTP, SFTP/FTP."
+                    $result
+                    return $False
+                }
+
+                $body["Type"] = $fsprotocol
+                $body["Username"] = $fsusername
+                $body["Password"] = $fspassword
+                $body["Domain"] = $domain
+                $body["Readonly"] = [bool]$readonly
+                $body["Options"] = $options
                 $json_body = $body | convertto-json
-                $response = Invoke-WebRequest -Uri $mount_image_url -Method Post -Credential $bmc_credential -Body $json_body -ContentType 'application/json'
+
+                $response = Invoke-WebRequest -Uri $images_member_uri -Credential $bmc_credential -Method Post -Body $json_body -ContentType 'application/json'
+                Write-Host
+                [String]::Format("- PASS, statuscode {0} returned to add image member successful",$response.StatusCode)
+
+                $mount_image_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteMapService.Mount"."target"
+                $response = Invoke-WebRequest -Uri $mount_image_url -Credential $bmc_credential -Method Post -ContentType 'application/json'
                 Write-Host
                 [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
-
             }
+        }
+        else
+        {
+            # mount_virtual_media_from_rdoc
+            # Get MountImages url from remote map resource instance
+            $response = Invoke-WebRequest -Uri $uri_remote_control -Credential $bmc_credential -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            $upload_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteControlService.UploadFromURL"."target"
+
+            # Get AllowableValues of protocol
+            $allow_protocols = $hash_table.Actions."#LenovoRemoteControlService.UploadFromURL"."Type@Redfish.AllowableValues"
+            if ($allow_protocols -notcontains $protocol) {
+                $allow_protocols = $allow_protocols | ConvertTo-Json
+                Write-Host
+                [String]::Format("For remote mounting of RDOC images, supported protocol list: {0}.",$allow_protocols)
+                return $False
+            }
+
+            if($fsprotocol -eq "samba")
+            {
+                $fsprotocol = "smb"
+            }
+
+            $body = @{
+                "sourceURL" = $source_url;
+                "Username" = $fsusername;
+                "Password" = $fspassword;
+                "Type" = $fsprotocol.ToUpper();
+                "Readonly" = [bool]$readonly;
+                "Domain" = $domain;
+                "Option" = $options
+            }
+            $json_body = $body | convertto-json
+
+            $response = Invoke-WebRequest -Uri $upload_url -Credential $bmc_credential -Method Post -Body $json_body -ContentType 'application/json'
+            Write-Host
+            [String]::Format("- PASS, statuscode {0} returned to upload media iso successful, next will mount media iso...",$response.StatusCode)
+
+            # Get MountImages url from remote map resource instance
+            $response = Invoke-WebRequest -Uri $uri_remote_map -Credential $bmc_credential -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            $mount_image_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteMapService.Mount"."target"
+
+            $body = @{""=""}
+            $json_body = $body | convertto-json
+            $response = Invoke-WebRequest -Uri $mount_image_url -Method Post -Credential $bmc_credential -Body $json_body -ContentType 'application/json'
+            Write-Host
+            [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
+
         }
     }    
     catch

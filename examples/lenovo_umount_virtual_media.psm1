@@ -88,57 +88,82 @@ function lenovo_umount_virtual_media
 
         $JsonHeader = @{"X-Auth-Token" = $session_key}
     
-        # Get the manager url collection
-        $manager_url_collection = @()
+        # Get the manager/system url collection
+        $root_urls = @()
+        $root_urls_collection = @()
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
 
-        
-        $managers_url = $converted_object.Managers."@odata.id"
-        $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
-    
-        # Convert response content to hash table
-        $converted_object = $response.Content | ConvertFrom-Json
-        $hash_table = @{}
-        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-        
-        # Set the $manager_url_collection
-        foreach ($i in $hash_table.Members)
-        {
-            $i = [string]$i
-            $manager_url_string = ($i.Split("=")[1].Replace("}",""))
-            $manager_url_collection += $manager_url_string
-        }
 
-        # Loop all Manager resource instance in $manager_url_collection
-        foreach ($manager_url_string in $manager_url_collection)
-        {
-        
-            # Get servicedata uri from the Manager resource instance
-            $uri_address_manager = "https://$ip" + $manager_url_string
+        $managers_url = "https://$ip" + $converted_object.Managers."@odata.id"
+        $systems_url = "https://$ip" + $converted_object.Systems."@odata.id"
+        $root_urls += $managers_url
+        $root_urls += $systems_url
 
-            # Get the virtual media url
-            $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-            $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
+        foreach ($root_url in $root_urls) {
+            $response = Invoke-WebRequest -Uri $root_url -Headers $JsonHeader -Method Get -UseBasicParsing
 
-            $uri_remote_map ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteMap"."@odata.id"
-            $uri_remote_control ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteControl"."@odata.id"
-
-            # Get the virtual media response resource
-            $response = Invoke-WebRequest -Uri $uri_virtual_media -Headers $JsonHeader -Method Get -UseBasicParsing
+            # Convert response content to hash table
             $converted_object = $response.Content | ConvertFrom-Json
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
 
-            $members_count = $hash_table."Members@odata.count"
-            if($members_count -eq 0)
+            # Set the $root_urls_collection
+            foreach ($i in $hash_table.Members)
             {
-                Write-Host "This server doesn't mount virtual media."
+                $i = [string]$i
+                $url_string = ($i.Split("=")[1].Replace("}",""))
+                $root_urls_collection += $url_string
             }
+        }
 
+        $uri_virtual_media = ""
+        $response_manager_url = ""
+        # Loop all Manager/System resource instance in $root_urls_collection
+        foreach ($url_string in $root_urls_collection)
+        {
+
+            # Get servicedata uri from the Manager/System resource instance
+            $uri_address_manager = "https://$ip" + $url_string
+
+            # Get the virtual media url
+            $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            # Get the virtual media url from the manager/system response
+            if ($converted_object."VirtualMedia") {
+                $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
+            }
+            # Get manager response
+            if ($converted_object."Oem") {
+                if ($converted_object."Oem"."Lenovo") {
+                    if ($converted_object."Oem"."Lenovo"."RemoteControl") {
+                        $response_manager_url = $converted_object
+                    }
+                }
+            }
+            if ($uri_virtual_media -eq "" -or $response_manager_url -eq "") {
+                continue
+            }
+        }
+
+        $uri_remote_map ="https://$ip" + $response_manager_url."Oem"."Lenovo"."RemoteMap"."@odata.id"
+        $uri_remote_control ="https://$ip" + $response_manager_url."Oem"."Lenovo"."RemoteControl"."@odata.id"
+
+        # Get the virtual media response resource
+        $response = Invoke-WebRequest -Uri $uri_virtual_media -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object = $response.Content | ConvertFrom-Json
+        $hash_table = @{}
+        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+        $members_count = $hash_table."Members@odata.count"
+        if($members_count -eq 0)
+        {
+            Write-Host "This server doesn't mount virtual media."
+        }
+
+        if($mounttype -eq "Network")
+        {
             if($members_count -eq 10)
             {
                 # umount_virtual_media
@@ -179,82 +204,79 @@ function lenovo_umount_virtual_media
             }
             else 
             {
-                if($mounttype == "Network")
+                # umount_all_virtual_from_network
+                $response = Invoke-WebRequest -Uri $uri_remote_map -Headers $JsonHeader -Method Get -UseBasicParsing
+                $converted_object = $response.Content | ConvertFrom-Json
+                $hash_table = @{}
+                $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                $umount_images_uri = "https://$ip" + $hash_table."Actions"."#LenovoRemoteMapService.UMount"."target"
+
+                $response = Invoke-WebRequest -Uri $umount_images_uri -Headers $JsonHeader -Method Post -ContentType 'application/json'
+
+                Write-Host
+                [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode)
+                return $True
+            }
+        }
+        else
+        {
+            # umount_virtual_media_from_rdoc
+            $response = Invoke-WebRequest -Uri $uri_remote_control -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            $mount_image_uri = "https://$ip" + $hash_table.MountImages."@odata.id"
+
+            $response = Invoke-WebRequest -Uri $mount_image_uri -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            $image_uri_list = $hash_table.Members
+
+            if($image -eq "all")
+            {
+                foreach($image_uri in $image_uri_list)
                 {
-                    # umount_all_virtual_from_network
-                    $response = Invoke-WebRequest -Uri $uri_remote_map -Headers $JsonHeader -Method Get -UseBasicParsing
-                    $converted_object = $response.Content | ConvertFrom-Json
-                    $hash_table = @{}
-                    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                    $umount_images_uri = "https://$ip" + $hash_table."Actions"."#LenovoRemoteMapService.UMount"."target"
-
-                    $response = Invoke-WebRequest -Uri $umount_images_uri -Headers $JsonHeader -Method Post -ContentType 'application/json'
-
-                    Write-Host
-                    [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful",$response.StatusCode) 
-                    return $True
-                }
-                else
-                {
-                    # umount_virtual_media_from_rdoc
-                    $response = Invoke-WebRequest -Uri $uri_remote_control -Headers $JsonHeader -Method Get -UseBasicParsing
-                    $converted_object = $response.Content | ConvertFrom-Json
-                    $hash_table = @{}
-                    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                    $mount_image_uri = "https://$ip" + $hash_table.MountImages."@odata.id"
-
-                    $response = Invoke-WebRequest -Uri $mount_image_uri -Headers $JsonHeader -Method Get -UseBasicParsing
-                    $converted_object = $response.Content | ConvertFrom-Json
-                    $hash_table = @{}
-                    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                    $image_uri_list = $hash_table.Members
-
-                    if($image == "all")
+                    $image_uri = $image_uri."@odata.id"
+                    if($image_uri -match "RDOC")
                     {
-                        foreach($image_uri in $image_uri_list)
-                        {
-                            $image_uri = $image_uri."@odata.id"
-                            if($image_uri -match "RDOC")
-                            {
-                                $response = Invoke-WebRequest -Uri $image_uri -Headers $JsonHeader -Method Delete
-                            }
-                        }
-                        
-                        $result = "Umount all virtual media successfully."
+                        $response = Invoke-WebRequest -Uri $image_uri -Headers $JsonHeader -Method Delete
+                    }
+                }
+
+                $result = "Umount all virtual media successfully."
+                $result
+                return $True
+            }
+            else
+            {
+                foreach($image_uri in $image_uri_list)
+                {
+                    $image_uri = "https://$ip" + $image_uri."@odata.id"
+                    $response = Invoke-WebRequest -Uri $image_uri -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $converted_object = $response.Content | ConvertFrom-Json
+                    $hash_table = @{}
+                    $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    $image_iso_name = $hash_table.name
+
+                    if($image_iso_name -eq $image)
+                    {
+                        $response = Invoke-WebRequest -Uri $image_uri -Headers $JsonHeader -Method Delete
+
+                        $result = [String]::Format("- PASS, statuscode {0} returned to mount virtual media successful.",$response.StatusCode)
                         $result
                         return $True
                     }
-                    else 
+                    else
                     {
-                        foreach($image_uri in $image_uri_list)
-                        {
-                            $image_uri = $image_uri."@odata.id"
-                            $response = Invoke-WebRequest -Uri $image_uri -Headers $JsonHeader -Method Get -UseBasicParsing
-                            $converted_object = $response.Content | ConvertFrom-Json
-                            $hash_table = @{}
-                            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                            $image_iso_name = $hash_table.name
-
-                            if($image_iso_name == $image)
-                            {
-                                $response = Invoke-WebRequest -Uri $image_uri -Headers $JsonHeader -Method Delete
-
-                                $result = "Umount virtual media iso {0} successfully.",$image
-                                $result
-                                return $True
-                            }
-                            else
-                            {
-                                continue    
-                            }
-                        }
-
-                        $result = "Please check the iso name is correct and has been mounted."
-                        $result
-                        return $False
-                        
+                        continue
                     }
                 }
+
+                $result = "Please check the iso name is correct and has been mounted."
+                $result
+                return $False
+
             }
         }
     }    
