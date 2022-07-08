@@ -87,7 +87,6 @@ function get_chassis_indicator_led
         $converted_object = $response.Content | ConvertFrom-Json
 
         # Get the chassis url collection
-        $chassis_url_collection = @()
         $chassis_url = $converted_object.Chassis."@odata.id"
         $chassis_url_string = "https://$ip" + $chassis_url
         $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing 
@@ -97,29 +96,22 @@ function get_chassis_indicator_led
         $hash_table = @{}
         $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
         
-        # Set the $chassis_url_collection
         foreach ($i in $hash_table.Members)
         {
             $i = [string]$i
             $chassis_url_string = ($i.Split("=")[1].Replace("}",""))
-            $chassis_url_collection += $chassis_url_string
-        }
-
-        # Loop all Manager resource instance in $manager_url_collection
-        foreach ($chassis_url_string in $chassis_url_collection)
-        {
-        
-            # Get LogServices from the Manager resource instance
-            $uri_address_chassis = "https://$ip" + $chassis_url_string
-            $response = Invoke-WebRequest -Uri $uri_address_chassis -Headers $JsonHeader -Method Get -UseBasicParsing
+            $response_led_url = "https://$ip" + $chassis_url_string
+            $response_IndicatorLED = Invoke-WebRequest -Uri $response_led_url -Headers $JsonHeader -Method Get -UseBasicParsing
             
-            $converted_object = $response.Content | ConvertFrom-Json
-            $hash_table = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-
-            # Convert the PSCustomObject back to a hashtable
+            $converted_object_IndicatorLED = $response_IndicatorLED.Content | ConvertFrom-Json
+            $ht_IndicatorLED = @{}
+            $converted_object_IndicatorLED.psobject.properties | Foreach { $ht_IndicatorLED[$_.Name] = $_.Value }
+            if($hash_table.'Members@odata.count' -gt 1 -and $ht_IndicatorLED.keys -notcontains 'IndicatorLED')
+            {
+                continue
+            }
             $ht2 = @{}
-            $hash_table."Links".psobject.properties | Foreach { $ht2[$_.Name] = $_.Value }
+            $ht_IndicatorLED."Links".psobject.properties | Foreach { $ht2[$_.Name] = $_.Value }
             if($ht2.keys -contains "ComputerSystems")
             {
                 $indicator_status = @{}
@@ -127,7 +119,7 @@ function get_chassis_indicator_led
                 $indicator_status["IndicatorLED"] = $IndicatorLED
 
                 # Output result
-                ConvertOutputHashTableToObject $indicator_status
+                $indicator_status | ConvertTo-Json -Depth 10
             }  
         }
     }
