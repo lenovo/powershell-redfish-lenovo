@@ -122,8 +122,7 @@ function get_system_log
             
             $converted_object = $response.Content | ConvertFrom-Json
             $hash_table = @{}
-            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-            
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }       
             # Loop all log services in collections
             foreach ($i in $hash_table.Members)
             {
@@ -135,18 +134,24 @@ function get_system_log
                 $converted_object = $sub_response.Content | ConvertFrom-Json
                 $hash_table = @{}
                 $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                if ($hash_table.Keys -notcontains "Entries") 
+                {
+                    continue
+                }
                 $temp = [string]$hash_table.Entries
                 $uri_address_log_service_entries = "https://$ip"+($temp.Split("=")[1].Replace("}",""))
-                
                 # Get detail log information from log service's Entries uri
-                
                 $sub_response = Invoke-WebRequest -Uri $uri_address_log_service_entries -Headers $JsonHeader -Method Get -UseBasicParsing
                 # Converting PS Custom Object to hashtable, print logs to the screen
                 $converted_object = $sub_response.Content | ConvertFrom-Json
                 $hash_table2 = @{}
                 $converted_object.psobject.properties | Foreach { $hash_table2[$_.Name] = $_.Value }
+                if ($hash_table2.'Members@odata.count' -eq 0) 
+                {
+                    continue
+                }
                 # Output result
-                $hash_table2.Members
+                $hash_table2.Members | ConvertTo-Json
             }
         }
     }    

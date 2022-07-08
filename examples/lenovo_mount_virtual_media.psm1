@@ -37,7 +37,7 @@ function lenovo_mount_virtual_media
     - password: Pass in BMC username password
     - image: Mount virtual media name
     - mounttype: Types of mount virtual media
-    - fsprotocol: Specifies the protocol prefix for uploading image or ISO
+    - fsprotocol: Specify the protocol for uploading image or ISO
     - fsip: Specify the file server ip
     - fsport: 
     - fsusername: Username to access the file path, available for Samba, NFS, HTTP, SFTP/FTP
@@ -51,9 +51,9 @@ function lenovo_mount_virtual_media
     - config_file: Pass in configuration file path, default configuration file is config.ini
    .EXAMPLE
     Example of HTTP/NFS:
-    "lenovo_mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD --fsprotocol HTTP --fsip 10.10.10.11 --fsdir /fspath/ --image isoname.img"
+    "lenovo_mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD -fsprotocol HTTP -fsip 10.10.10.11 -fsdir /fspath/ -image isoname.img"
     Example of SFTP/FTP/Samba:
-    "lenovo_mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD --fsprotocol SFTP --fsip 10.10.10.11 --fsusername mysftp --fspassword mypass --fsdir /fspath/ --image isoname.img"
+    "lenovo_mount_virtual_media  -ip 10.10.10.10 -username USERID -password PASSW0RD -fsprotocol SFTP -fsip 10.10.10.11 -fsusername mysftp -fspassword mypass -fsdir /fspath/ -image isoname.img"
    #>
     
    
@@ -69,7 +69,7 @@ function lenovo_mount_virtual_media
         [string]$image="",
         [Parameter(Mandatory=$False)]
         [string]$mounttype="Network",
-        [Parameter(Mandatory=$False)]
+        [Parameter(Mandatory=$False, HelpMessage='Specify the protocol for uploading image or ISO. Support:["Samba", "NFS", "CIFS", "HTTP", "HTTPS", "SFTP", "FTP"].')]
         [string]$fsprotocol="",
         [Parameter(Mandatory=$False)]
         [string]$fsip="",
@@ -216,6 +216,7 @@ function lenovo_mount_virtual_media
             {
                 $fsdir = "/" + $fsdir.Trim("/")
             }
+            $protocol = $fsprotocol.ToLower()
             $fsprotocol = $fsprotocol.ToLower()
 
             if($fsprotocol -eq "samba")
@@ -231,7 +232,7 @@ function lenovo_mount_virtual_media
             {
                 if($members_count -eq 10)
                 {
-                    if($fsprotocol -eq "nfs" -or $fsprotocol -eq "http")
+                    if(@("nfs", "http", "https", "cifs") -contains $fsprotocol)
                     {
                         # mount_virtual_media
                         # Loop all the virtual media members and get all the virtual media informations
@@ -252,7 +253,10 @@ function lenovo_mount_virtual_media
                                     {
                                         $image_uri = $fsip + $fsport + ":" + $fsdir + "/" + $image
                                     }
-                                    else 
+                                    elseif ($fsprotocol -eq "cifs") {
+                                        $image_uri = "//" + $fsip + $fsport + $fsdir + "/" + $image
+                                    }
+                                    else
                                     {
                                         $image_uri = $fsprotocol + "://" + $fsip + $fsport + $fsdir + "/" + $image
                                     }
@@ -261,6 +265,11 @@ function lenovo_mount_virtual_media
                                     $body["Image"] = $image_uri
                                     $body["WriteProtected"] = [bool]$writeprotected
                                     $body["Inserted"] = [bool]$inserted
+                                    if ($fsprotocol -eq "cifs") {
+                                        $body["TransferProtocolType"] = $fsprotocol.ToUpper()
+                                        $body["UserName"] = $fsusername
+                                        $body["Password"] = $fspassword
+                                    }
                                     $json_body = $body | convertto-json
 
                                     $virtual_media_member_uri = "https://$ip" + $hash_table."@odata.id"
@@ -283,7 +292,7 @@ function lenovo_mount_virtual_media
                     }
                     else
                     {
-                        $result = "For remote mounts, only HTTP and NFS(no credential required) protocols are supported."
+                        $result = "For remote mounts, only HTTP, HTTPS, CIFS and NFS(no credential required) protocols are supported."
                         $result
                         return $False
                     }
@@ -346,6 +355,15 @@ function lenovo_mount_virtual_media
                 $hash_table = @{}
                 $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
                 $upload_url = "https://$ip" + $hash_table.Actions."#LenovoRemoteControlService.UploadFromURL"."target"
+
+                # Get AllowableValues of protocol
+                $allow_protocols = $hash_table.Actions."#LenovoRemoteControlService.UploadFromURL"."Type@Redfish.AllowableValues"
+                if ($allow_protocols -notcontains $protocol) {
+                    $allow_protocols = $allow_protocols | ConvertTo-Json
+                    Write-Host
+                    [String]::Format("For remote mounting of RDOC images, supported protocol list: {0}.",$allow_protocols)
+                    return $False
+                }
 
                 if($fsprotocol -eq "samba")
                 {

@@ -114,6 +114,7 @@ function set_bmc_ipv4
         $target_ethernet_uri = $null
         $target_ethernet_current_setting = @{}
         $nic_addr = $ip.split(':')[0]  # split port if existing
+        $StaticNameServers_exist = $False
         # Loop all Manager resource instance in $manager_url_collection
         foreach ($manager_url_string in $manager_url_collection)
         {
@@ -145,6 +146,9 @@ function set_bmc_ipv4
                 $tmp_converted_object = $converted_object | Out-String
                 if($tmp_converted_object.contains($nic_addr))
                 {
+                    if ($tmp_converted_object.Contains("StaticNameServers")) {
+                        $StaticNameServers_exist = $True
+                    }
                     $target_ethernet_uri = $ethernet_url_string
                     $converted_object.psobject.properties | Foreach { $target_ethernet_current_setting[$_.Name] = $_.Value }
                     break
@@ -191,7 +195,8 @@ function set_bmc_ipv4
             {
                 $config["SubnetMask"] = $static_mask
             }
-            if($flag_SR635_SR655)
+            # Check whether the BMC of SR635/655 has "StaticNameServers" property. If yes, specify "IPv4StaticAddresses", else, specify "IPv4Addresses".
+            if($flag_SR635_SR655 -and $StaticNameServers_exist -eq $False)
             {
                 $payload["IPv4Addresses"] = @()
                 $payload["IPv4Addresses"] += $config
@@ -314,7 +319,14 @@ function set_bmc_ipv4
         }
         Write-Host
         [String]::Format("- PASS, statuscode {0} returned successfully to set bmc ip",$response.StatusCode) 
-        
+
+        if ($response.StatusCode -eq 202) {
+            $converted_object = $response.Content | ConvertFrom-Json
+            $task_uri = $converted_object."@odata.id"
+            Write-Host
+            [String]::Format("A new task is created with uri of {0}, wait 1 minute for the task to complete. \n If you need, please go to script 'get_all_tasks.py' to check task status.",$task_uri)
+        }
+
         return $True
     }
     catch

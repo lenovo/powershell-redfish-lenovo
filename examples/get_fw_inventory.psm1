@@ -110,7 +110,6 @@ function get_fw_inventory
         foreach ($i in $hash_table.Members)
         {
             $firmware_x_url = "https://$ip" + $i.'@odata.id'
-            
             # Get account information if account is valid (UserName not blank)
             $response_firmware_x_url = Invoke-WebRequest -Uri $firmware_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
             # Convert response_firmware_x_url content to hash table
@@ -131,9 +130,8 @@ function get_fw_inventory
                 $fw["State"] = $hash_table.Status.State
             }
             # Output result
-            ConvertOutputHashTableToObject $fw
+            ConvertOutputHashTableToObject $fw | ConvertTo-Json
         }
-
     }
     catch
     {

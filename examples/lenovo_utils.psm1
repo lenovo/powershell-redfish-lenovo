@@ -306,3 +306,131 @@ function ConvertOutputHashTableToObject
 
     return $object
 }
+
+function flush
+{
+    param
+    (
+        [Parameter(Mandatory=$False)]
+        [int]$percent=0
+    )
+
+    $list = "|", "\", "-", "/"
+    foreach ($i in $list) {
+        if ($percent -gt 0){
+            Write-Host $i, ((' '*10), "PercentComplete: ", $percent), "`r" -NoNewline
+        }
+        else{
+            Write-Host $i, "`r" -NoNewline
+        }
+        Start-Sleep -m 500
+    }
+}
+
+function task_monitor
+{
+   <#
+   .Synopsis
+    Monitor task status
+   .DESCRIPTION
+    Monitor task status
+    - session_key: Pass in session info for authentication
+    - task_uri: Monitor task URL
+   #>
+    param($session_key, $task_uri)
+
+    $JsonHeader = @{ 'X-Auth-Token' = $session_key; }
+    
+    # Monitor task status
+    $RUNNING_TASK_STATE = @("New", "Pending", "Service", "Starting", "Stopping", "Running", "Cancelling", "Verifying")
+    $END_TASK_STATE = @("Cancelled", "Completed", "Exception", "Killed", "Interrupted", "Suspended")
+    
+    $current_state = ""
+    $messages = @()
+    $percent = 0
+    
+    while($True)
+    {
+        # Get the task uri response
+        $response = Invoke-WebRequest -Uri $task_uri -Headers $JsonHeader -Method Get -UseBasicParsing
+        if ($response.StatusCode -eq 200)
+        {
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+
+            $task_state = $converted_object.TaskState
+            if ($hash_table.keys -contains "Messages" -and $null -ne $hash_table.'Messages')
+            {
+                $messages = $hash_table.'Messages'
+            }
+            if ($converted_object.PercentComplete)
+            {
+                $percent = $converted_object.PercentComplete
+            }
+            if ($RUNNING_TASK_STATE -contains $task_state)
+            {
+                if ($task_state -ne $current_state)
+                {
+                    $current_state = $task_state
+                    Write-Host "Task state is $current_state, wait a minute."
+                    continue
+                }
+                else
+                {
+                    flush -percent $percent
+                }
+            }
+            elseif ($task_state | Where-Object {$_.startswith("Downloading")})
+            {
+                Write-Host (" "*100),"`r"
+                Write-Host $task_state,"`r" -NoNewline
+                continue
+            }
+            elseif ($task_state | Where-Object {$_.startswith("Update")})
+            {
+                Write-Host (" "*100),"`r"
+                Write-Host $task_state,"`r" -NoNewline
+                continue
+            }
+            elseif($END_TASK_STATE -contains $task_state)
+            {
+                Write-Host (" "*100),"`r"
+                Write-Host "End of the task."
+                $result = @{"ret"=$True; "task_state"=$task_state;}
+                if ($messages.Count -gt 0)
+                {
+                    $result["msg"] = $messages[0]
+                }
+                else
+                {
+                    $result["msg"] = ''
+                }
+                return $result
+            }
+            else
+            {
+                $result = @{"ret"=$False; "task_state"=$task_state;}
+                if ($messages.Count -gt 0)
+                {
+                    $result["msg"] = [String]::Format("Unknown TaskState {0}. Task Not conforming to Schema Specification. Messages:{1}", ($task_state, $messages[0]))
+                }
+                else
+                {
+                    $result["msg"] = [String]::Format("Unknown TaskState {0}. Task Not conforming to Schema Specification.", $task_state)
+                }
+                return $result
+            }
+        }
+        else
+        {
+            $task_state = $null
+            if ($response.StatusCode -eq 401)
+            {
+                $task_state = 401
+            }
+            $result = @{"ret"=$False; "task_state"=$task_state; "msg"=[String]::Format("Url {0} response Error code {1}", $task_uri, $response.StatusCode)}
+            return $result
+        }
+    }
+}

@@ -166,6 +166,50 @@ function clear_system_log
                 try
                 {
                     $response_clear_log = Invoke-WebRequest -Uri $clear_log_url_string -Headers $JsonHeader -Method Post  -Body $json_body -ContentType 'application/json'
+                    
+                    if ($response_clear_log.StatusCode -eq 200 -or $response_clear_log.StatusCode -eq 204)
+                    {
+                        Write-Host
+                        [String]::Format("- PASS, statuscode {0} returned to successfully clear system log.",$response_clear_log.StatusCode)
+                        return $True
+                    }
+                    elseif ($response_clear_log.StatusCode -eq 202)
+                    {
+                        $converted_object = $response_clear_log.Content | ConvertFrom-Json
+                        $task_uri = "https://$ip" + $converted_object.'@odata.id'
+                        
+                        $result = task_monitor $session_key $task_uri
+
+                        # Delete the task when the task state is completed without any warning
+                        $severity = ''
+                        if ($result.ret -eq $True -and $result.task_state -eq "Completed" -and $result.msg -ne '')
+                        {
+                            if ($null -ne $result.msg.'Severity')
+                            {
+                                $severity = $result.msg.'Severity'
+                            }
+                        }
+                        if ($result.ret -eq $True -and $result.task_state -eq "Completed" -and ($result.msg -eq '' -or $severity -eq "OK"))
+                        {
+                            $response_deltask = Invoke-WebRequest -Uri $task_uri -Headers $JsonHeader -Method Delete -UseBasicParsing
+                        }
+                        if ($result.ret -eq $True)
+                        {
+                            $task_state = $result.task_state
+                            if ($task_state -eq "Completed")
+                            {
+                                Write-Host
+                                [String]::Format("- PASS, Clear system log successfully. Messages: {0}", $result.msg.Message) 
+                                return $True
+                            }
+                            else
+                            {
+                                Write-Host
+                                [String]::Format("Failed to clear system log. Messages: {0}", $result.msg.Message) 
+                                return $False
+                            }
+                        }
+                    }
                 }
                 catch
                 {
@@ -192,9 +236,6 @@ function clear_system_log
                     }
                     return $False
                 }
-                Write-Host
-                [String]::Format("- PASS, statuscode {0} returned to successfully clear system log.",$response_clear_log.StatusCode)
-                return $True   
             }
         }  
     }
