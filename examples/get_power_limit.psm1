@@ -103,25 +103,30 @@ function get_power_limit
         $converted_object = $response.Content | ConvertFrom-Json
         foreach($i in $converted_object.Members)
         {
-               $tmp_chassis_url_string = "https://$ip" + $i."@odata.id"
-               $chassis_url_collection += $tmp_chassis_url_string
-        }
-        
-        # Loop all chassis resource instance in $chassis_url_collection
-        foreach($chassis_url_string in $chassis_url_collection)
-        {
-            #get chassis resource
-            $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-            $converted_object = $response.Content | ConvertFrom-Json
-            
-            $links_info = $converted_object.Links
-            $ht_links = @{}
-            $links_info.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
-            if($ht_links.Keys -notcontains "ComputerSystems")
+            $tmp_chassis_url_string = "https://$ip" + $i."@odata.id"
+            $chassis_url_collection += $tmp_chassis_url_string
+            $response_links = Invoke-WebRequest -Uri $tmp_chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object_links = $response_links.Content | ConvertFrom-Json
+            $links_response = @{}
+            $converted_object_links.psobject.properties | Foreach { $links_response[$_.Name] = $_.Value }
+            if($chassis_url_collection.Length -gt 1 -and $links_response.keys -notcontains 'Links')
             {
                 continue
-            }  
-
+            }
+            else
+            {
+                $computersystems_response = @{}
+                $links_response.Links.psobject.properties | Foreach { $computersystems_response[$_.Name] = $_.Value }
+                if($computersystems_response.keys -notcontains 'ComputerSystems')
+                {
+                    continue
+                }
+            }
+            $response = Invoke-WebRequest -Uri $tmp_chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response.Content | ConvertFrom-Json
+            $ht_links = @{}
+            $converted_object.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
+            
             #Get powerl_url resource
             $thermal_url = "https://$ip" + $converted_object.Power."@odata.id"
             $response = Invoke-WebRequest -Uri $thermal_url -Headers $JsonHeader -Method Get -UseBasicParsing
@@ -138,9 +143,8 @@ function get_power_limit
                     $power_limit.psobject.properties | Foreach { $ht_limit_info[$_.Name] = $_.Value }
                 }
                 # Output result
-                ConvertOutputHashTableToObject $ht_limit_info
+                $power_limit | ConvertTo-Json -Depth 10
             }
-            
         }
         
     }
