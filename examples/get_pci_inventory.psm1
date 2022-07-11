@@ -101,6 +101,7 @@ function get_pci_inventory
         $chassis_url_string = "https://$ip"+ $chassis_url
         $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
+
         foreach($i in $converted_object.Members)
         {
                $tmp_chassis_url_string = "https://$ip" + $i."@odata.id"
@@ -113,6 +114,11 @@ function get_pci_inventory
             # Get system resource
             $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            if ($hash_table.Keys -notcontains "PCIeDevices") {
+                break
+            }
 
             # Get PCIeDevices resource 
             $pci_devices_url = "https://$ip" + $converted_object.PCIeDevices."@odata.id"
@@ -129,7 +135,7 @@ function get_pci_inventory
 
                 # Get pci resource
                 $pci_device_x_url ="https://$ip" +  $converted_pci_object.Members[$i]."@odata.id"
-                $response_pci_x_device = Invoke-WebRequest -Uri $pci_device_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $response_pci_x_device = Invoke-WebRequest -Uri $pci_device_x_url -Headers $JsonHeader -Method Get -UseBasicParsing 
                 $converted_pci_x_object = $response_pci_x_device.Content | ConvertFrom-Json
                 $ht_pcidevice["PCI_Device_ID"] = $converted_pci_x_object.Id
                 $ht_pcidevice["Name"] = $converted_pci_x_object.Name
@@ -141,9 +147,8 @@ function get_pci_inventory
                 $ht_pcidevice["PartNumber"] = $converted_pci_x_object.PartNumber
                 $ht_pcidevice["FirmwareVersion"] = $converted_pci_x_object.FirmwareVersion
                 $ht_pcidevice["SKU"] = $converted_pci_x_object.SKU
-
                 # Retrun result
-                $ht_pcidevice
+                ConvertOutputHashTableToObject $ht_pcidevice | ConvertTo-Json
                 Write-Host " "
             }
         }  
@@ -151,8 +156,32 @@ function get_pci_inventory
     catch
     {
         # Handle exception response
-        $ret = handle_exception -arg_object $_
-        $ret
+        if($_.Exception.Response)
+        {
+            Write-Host "Error occured, error code:" $_.Exception.Response.StatusCode.Value__
+            if ($_.Exception.Response.StatusCode.Value__ -eq 401)
+            {
+                Write-Host "Error message: You are required to log on Web Server with valid credentials first."
+            }
+            elseif ($_.ErrorDetails.Message)
+            {
+                $response_j = $_.ErrorDetails.Message | ConvertFrom-Json | Select-Object -Expand error
+                $response_j = $response_j | Select-Object -Expand '@Message.ExtendedInfo'
+                Write-Host "Error message:" $response_j.Resolution
+            }
+            else 
+            {
+                $sr = new-object System.IO.StreamReader $_.Exception.Response.GetResponseStream()
+                $resobject = $sr.ReadToEnd() | ConvertFrom-Json
+                $resobject.error.('@Message.ExtendedInfo')    
+            }
+        }
+        # Handle system exception response
+        elseif($_.Exception)
+        {
+            Write-Host "Error message:" $_.Exception.Message
+            Write-Host "Please check arguments or server status."
+        }
         return $False
     }
     # Delete existing session whether script exit successfully or not
