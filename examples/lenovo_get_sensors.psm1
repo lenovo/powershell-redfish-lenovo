@@ -51,7 +51,6 @@ function lenovo_get_sensors
         [string]$config_file="config.ini"
         )
         
-
     # Get configuration info from config file
     $ht_config_ini_info = read_config -config_file $config_file
     
@@ -99,7 +98,6 @@ function lenovo_get_sensors
                $tmp_chassis_url_string = "https://$ip" + $i."@odata.id"
                $chassis_url_collection += $tmp_chassis_url_string
         }
-        
         # Define property list we want to get
         $property_list = @('Description', 'EntityInstance', 'Id', 'Assertion',
                       'RecordType', 'OwnerLUN', 'OwnerID', 'SensorNumber',
@@ -114,9 +112,15 @@ function lenovo_get_sensors
             #get chassis resource
             $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object_chassis = $response.Content | ConvertFrom-Json
-            
+            $hash_table = @{}
+            $converted_object_chassis.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            if ($hash_table.Keys -notcontains "Sensors")
+            {
+                break   
+            }
+
             #get sensors resource
-            $sensors_url_string = "https://$ip" + $converted_object_chassis."Oem"."Lenovo"."Sensors"."@odata.id"
+            $sensors_url_string = "https://$ip" + $converted_object_chassis.Sensors."@odata.id"
             $response = Invoke-WebRequest -Uri $sensors_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object_sensors = $response.Content | ConvertFrom-Json
 
@@ -126,7 +130,6 @@ function lenovo_get_sensors
                 $sensor_url_string = "https://$ip" + $i."@odata.id"
                 $response = Invoke-WebRequest -Uri $sensor_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
                 $converted_object_sensor = $response.Content | ConvertFrom-Json
-
                 #get property info of every sensor according to property list
                 $sensor_info = @{}
                 foreach($property in $property_list)
@@ -136,9 +139,8 @@ function lenovo_get_sensors
                         $sensor_info[$property] = $converted_object_sensor.$property
                     }
                 }
-
                 # Output result
-                ConvertOutputHashTableToObject $sensor_info
+                ConvertOutputHashTableToObject $sensor_info | ConvertTo-Json
             }
         }
     }
@@ -179,6 +181,5 @@ function lenovo_get_sensors
         {
             delete_session -ip $ip -session $session
         }
-    }
-    
+    } 
 }
