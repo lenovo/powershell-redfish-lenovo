@@ -155,7 +155,7 @@ function get_schema
                     }
                     
                     # Return result
-                    $ht_location
+                    $ht_location | ConvertTo-Json
                 }
                 
             }
