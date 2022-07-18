@@ -78,7 +78,6 @@ function lenovo_get_cpu_inventory
     {
         $system_id = [string]($ht_config_ini_info['SystemId'])
     }
-
     try
     {
         $session_key = ""
@@ -112,20 +111,21 @@ function lenovo_get_cpu_inventory
 
             # Get cpu count
             $cpu_count = $processors_converted_object."Members@odata.count"
-
-            if(($member_id -lt 0) -or ($member_id -gt $cpu_count))
+            if ($member_id -ne "None") 
             {
-                Write-Host "Invalid CPU member id, Please check arguments or server status."
+                if(($member_id -le 0) -or ($member_id -gt $cpu_count))
+                {
+                    
+                    Write-Host "Invalid CPU member id, Please check arguments or server status."
+                }
             }
-
             # Loop all cpu resource instance in processor resource
             for($i = 0;$i -lt $cpu_count ;$i++)
             {
-                if($i -ne ($member_id - 1))
+                if(($member_id -ne "None") -and ($i -ne ($member_id - 1)))
                 {
                     continue
                 }
-
                 # Get cpu resource
                 $cpu_url = "https://$ip" + $processors_converted_object.Members[$i]."@odata.id"
                 $cpu_response =   Invoke-WebRequest -Uri $cpu_url -Headers $JsonHeader -Method Get -UseBasicParsing
@@ -135,15 +135,14 @@ function lenovo_get_cpu_inventory
                 $ht_cpu_info["Name"] = $cpu_converted_object.Name
                 $ht_cpu_info["TotalThreads"] = $cpu_converted_object.TotalThreads
                 $ht_cpu_info["InstructionSet"] = $cpu_converted_object.InstructionSet
-                $ht_cpu_info["State"] = $cpu_converted_object.Status.State
-                $ht_cpu_info["Health"] = $cpu_converted_object.Status.Health
+                $ht_cpu_info["Status"] = $cpu_converted_object.Status
                 $ht_cpu_info["ProcessorType"] = $cpu_converted_object.ProcessorType
                 $ht_cpu_info["TotalCores"] = $cpu_converted_object.TotalCores
                 $ht_cpu_info["Manufacturer"] = $cpu_converted_object.Manufacturer
                 $ht_cpu_info["MaxSpeedMHz"] = $cpu_converted_object.MaxSpeedMHz
                 $ht_cpu_info["Model"] = $cpu_converted_object.Model
                 $ht_cpu_info["Socket"] = $cpu_converted_object.Socket
-
+                
                 if ($null -ne $cpu_converted_object.Oem.Lenovo.CacheInfo)
                 {
                     $ht_cpu_info["CacheInfo"] = $cpu_converted_object.Oem.Lenovo.CacheInfo
@@ -152,9 +151,8 @@ function lenovo_get_cpu_inventory
                 {
                     $ht_cpu_info["CurrentClockSpeedMHz"] = $cpu_converted_object.Oem.Lenovo.CurrentClockSpeedMHz
                 }
-                
                 # Return result
-                $ht_cpu_info
+                ConvertOutputHashTableToObject $ht_cpu_info | ConvertTo-Json
                 Write-Host " "
             }
         }
