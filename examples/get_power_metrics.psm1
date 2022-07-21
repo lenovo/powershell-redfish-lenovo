@@ -122,10 +122,8 @@ function get_power_metrics
             $power_url = "https://$ip" + $converted_object.Power."@odata.id"
             $response = Invoke-WebRequest -Uri $power_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_power_object = $response.Content | ConvertFrom-Json
-
             # Get PowerControl count
             $powercontrol_x_count =$converted_power_object."PowerControl@odata.count"
-
             # Loop all pci resource instance in EthernetInterfaces resource
             for($i = 0;$i -lt $powercontrol_x_count;$i ++)
             {
