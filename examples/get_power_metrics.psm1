@@ -54,7 +54,6 @@ function get_power_metrics
         [string]$config_file="config.ini"
         )
         
-
     # Get configuration info from config file
     $ht_config_ini_info = read_config -config_file $config_file
     
@@ -113,7 +112,12 @@ function get_power_metrics
             # Get system resource
             $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
-
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            if ($hash_table.Keys -notcontains "Power")
+            {
+                continue   
+            }
             # Get Power resource 
             $power_url = "https://$ip" + $converted_object.Power."@odata.id"
             $response = Invoke-WebRequest -Uri $power_url -Headers $JsonHeader -Method Get -UseBasicParsing
@@ -125,18 +129,15 @@ function get_power_metrics
             # Loop all pci resource instance in EthernetInterfaces resource
             for($i = 0;$i -lt $powercontrol_x_count;$i ++)
             {
-                # $converted_power_object.PowerControl[$i]
                 $ht_powercontrol = @{}
-
                 $ht_powercontrol["MemberId"] = $converted_power_object.PowerControl[$i]."MemberId"
                 $ht_powercontrol["Name"] = $converted_power_object.PowerControl[$i]."Name"
                 $ht_powercontrol["PowerMetrics"] = $converted_power_object.PowerControl[$i]."PowerMetrics"
 
                 # Retrun result
-                $ht_powercontrol
+                ConvertOutputHashTableToObject $ht_powercontrol | ConvertTo-Json
                 Write-Host " "
             }
-            
         }  
     }
     catch
