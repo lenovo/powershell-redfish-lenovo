@@ -91,35 +91,14 @@ function get_power_redundancy
         }
         
         # Get the chassis url
-        $base_url = "https://$ip/redfish/v1/"
-        $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
-        $converted_object = $response.Content | ConvertFrom-Json
-        $chassis_url = $converted_object.Chassis."@odata.id"
-
-        #Get chassis list 
-        $chassis_url_collection = @()
-        $chassis_url_string = "https://$ip"+ $chassis_url
-        $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-        $converted_object = $response.Content | ConvertFrom-Json
-        foreach($i in $converted_object.Members)
-        {
-               $tmp_chassis_url_string = "https://$ip" + $i."@odata.id"
-               $chassis_url_collection += $tmp_chassis_url_string
-        }
-        
-        # Loop all chassis resource instance in $chassis_url_collection
-        foreach($chassis_url_string in $chassis_url_collection)
+        $chassis_url_list = get_chassis_urls $ip $session
+        foreach($chassis_url_string in $chassis_url_list)
         {
             #get chassis resource
             $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
-            $links_info = $converted_object.Links
             $ht_links = @{}
-            $links_info.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
-            if($ht_links.Keys -notcontains "ComputerSystems")
-            {
-                continue
-            }
+            $converted_object.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
 
             #Get powerl_url resource
             $thermal_url = "https://$ip" + $converted_object.Power."@odata.id"
@@ -140,11 +119,9 @@ function get_power_redundancy
                 $ht_redundancy_info["MaxNumSupported"] = $redundancy_info.MaxNumSupported
                 $ht_redundancy_info["Mode"] = $redundancy_info.Mode
                 # Output result
-                ConvertOutputHashTableToObject $ht_redundancy_info
+                $ht_redundancy_info | ConvertTo-Json -Depth 10
             }
-            
         }
-        
     }
     catch
     {
