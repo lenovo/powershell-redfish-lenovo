@@ -434,3 +434,54 @@ function task_monitor
         }
     }
 }
+function get_chassis_urls
+{
+    param(
+        [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
+        [string] $ip,
+        [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
+        $session
+        )
+    $session_key = $session.'X-Auth-Token'
+    $JsonHeader = @{ 'X-Auth-Token' = $session_key
+    }
+    $base_url = "https://$ip/redfish/v1/"
+    $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
+    $converted_object = $response.Content | ConvertFrom-Json
+    $chassis_url = $converted_object.Chassis."@odata.id"
+
+    #Get chassis list 
+    $chassis_url_list = @()
+    $chassis_url_string = "https://$ip"+ $chassis_url
+    $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+    $converted_object = $response.Content | ConvertFrom-Json
+
+    $chassis_url_collection = @()
+    foreach($i in $converted_object.Members)
+    {
+        $chassis_url_string = "https://$ip" + $i."@odata.id"
+        $chassis_url_collection += $chassis_url_string
+        $response_links = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
+        $converted_object_links = $response_links.Content | ConvertFrom-Json
+        $links_response = @{}
+        $converted_object_links.psobject.properties | Foreach { $links_response[$_.Name] = $_.Value }
+        if($chassis_url_collection.Length -gt 1 -and $links_response.keys -notcontains 'Links')
+        {
+            continue
+        }
+        else
+        {
+            $computersystems_response = @{}
+            $links_response.Links.psobject.properties | Foreach { $computersystems_response[$_.Name] = $_.Value }
+            if($computersystems_response.keys -notcontains 'ComputerSystems')
+            {
+                continue
+            }
+        }
+        #get chassis resource
+        $chassis_url_list += $chassis_url_string
+    }
+    return $chassis_url_list
+}
