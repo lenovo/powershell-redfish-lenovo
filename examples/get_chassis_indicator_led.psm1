@@ -85,7 +85,6 @@ function get_chassis_indicator_led
         $chassis_url_list = get_chassis_urls $ip $session
         foreach($response_led_url in $chassis_url_list)
         {
-            Write-Host $response_led_url
             $response_IndicatorLED = Invoke-WebRequest -Uri $response_led_url -Headers $JsonHeader -Method Get -UseBasicParsing
             
             $converted_object_IndicatorLED = $response_IndicatorLED.Content | ConvertFrom-Json
