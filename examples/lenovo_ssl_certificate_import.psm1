@@ -56,7 +56,7 @@ function read_cert_file_pem {
     }
 }
 
-function lenovo_ssl_cerificate_import
+function lenovo_ssl_certificate_import
 {
    <#
    .Synopsis
@@ -70,7 +70,7 @@ function lenovo_ssl_cerificate_import
     - config_file: Pass in configuration file path, default configuration file is config.ini
     - certfile: certificate file by user specified.
    .EXAMPLE
-    lenovo_ssl_cerificate_import -ip 10.10.10.10 -username USERID -password PASSW0RD -certfile CERTFILE_NAME
+    lenovo_ssl_certificate_import -ip 10.10.10.10 -username USERID -password PASSW0RD -certfile CERTFILE_NAME
    #>
    
     param(
