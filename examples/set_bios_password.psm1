@@ -56,6 +56,8 @@ function set_bios_password{
         [Parameter(Mandatory=$False)]
         [string]$bios_password="",
         [Parameter(Mandatory=$False)]
+        [string]$oldbiospasswd="",
+        [Parameter(Mandatory=$False)]
         [string]$system_id="None",
         [Parameter(Mandatory=$False)]
         [string]$config_file="config.ini"
@@ -131,6 +133,7 @@ function set_bios_password{
             $JsonBody = @{ 
                 "PasswordName" = $bios_password_name
                 "NewPassword" = $bios_password
+                "OldPassword" = $oldbiospasswd
                 } | ConvertTo-Json -Compress
             
             $response = Invoke-WebRequest -Uri $uri_set_bios_password -Headers $JsonHeader -Method Post -Body $JsonBody -ContentType 'application/json'            
