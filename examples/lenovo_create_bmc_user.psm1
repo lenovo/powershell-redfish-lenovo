@@ -142,6 +142,7 @@ function lenovo_create_bmc_user
 
             Write-Host
             [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
+            return $True
         }
 
         if($create_mode -eq "PATCH_Action")
@@ -179,7 +180,16 @@ function lenovo_create_bmc_user
                 return $False
             }
         }
-
+        if("Supervisor"  -in $authority -or "Administrator" -in $authority)
+        {
+            $role_name = "Administrator"
+        }elseif("Operator"  -in $authority)
+        {
+            $role_name = "Operator"
+        }elseif("ReadOnly"  -in $authority)
+        {
+            $role_name = "ReadOnly"
+        }
         $role_name = "CustomRole" + [string]$user_pos
         $links_role = @{}
         $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
@@ -219,7 +229,8 @@ function lenovo_create_bmc_user
                 "Enabled" = $true
                 "Links" = $links_role
             } | ConvertTo-Json -Compress
-        }else
+        }
+        else
         {
             $JsonBody = @{ "Password"=$newuserpassword
                 "UserName"=$newusername
@@ -231,6 +242,7 @@ function lenovo_create_bmc_user
         $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
         Write-Host
         [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
+        return $True
     }
     catch
     {
@@ -295,7 +307,7 @@ function set_custom_role_privileges
 ,"AdapterConfiguration_NetworkingAndSecurity","AdapterConfiguration_Advanced")
         foreach($auth in $authority)
         {
-            if($auth  -in $list_auth)
+            if($auth -in $list_auth)
             {
                 continue
             }
@@ -332,6 +344,8 @@ function set_custom_role_privileges
 
         $JsonBody = @{"OemPrivileges"=$authority}|ConvertTo-Json -Compress
         $response = Invoke-WebRequest -Uri $url_dest_role -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
+
+        Write-Host "update role auth successful"
         return $True
     }
     catch
