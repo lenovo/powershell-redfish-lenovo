@@ -108,7 +108,7 @@ function lenovo_create_bmc_user
         $converted_object = $response.Content | ConvertFrom-Json
 
         $create_mode = "POST_Action"
-        if(9 -ge ($converted_object."Members@odata.count") -le 12)
+        if(!$response.Headers['Allow'].contains('POST'))
         {
             $create_mode = "PATCH_Action"
         }
@@ -135,12 +135,14 @@ function lenovo_create_bmc_user
                 "Name"=$newusername
                 "UserName"=$newusername
                 "RoleId"=$role_name
+                "Enabled" = $true
                 } | ConvertTo-Json -Compress
 
             $response = Invoke-WebRequest -Uri $url_accounts -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
 
             Write-Host
             [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
+            return $True
         }
 
         if($create_mode -eq "PATCH_Action")
@@ -178,12 +180,20 @@ function lenovo_create_bmc_user
                 return $False
             }
         }
-
-        $role_name = "CustomRole" + [string]$user_pos
         $links_role = @{}
-        $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
+        if("Supervisor"  -in $authority -or "Administrator" -in $authority)
+        {
+            $role_name = "Administrator"
+        }elseif("Operator"  -in $authority)
+        {
+            $role_name = "Operator"
+        }elseif("ReadOnly"  -in $authority)
+        {
+            $role_name = "ReadOnly"
+        }
         if($result -ne $True)
         {
+            $role_name = "CustomRole" + [string]$user_pos
             $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
             if($result -ne $True)
             {
@@ -218,7 +228,8 @@ function lenovo_create_bmc_user
                 "Enabled" = $true
                 "Links" = $links_role
             } | ConvertTo-Json -Compress
-        }else
+        }
+        else
         {
             $JsonBody = @{ "Password"=$newuserpassword
                 "UserName"=$newusername
@@ -230,6 +241,7 @@ function lenovo_create_bmc_user
         $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
         Write-Host
         [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
+        return $True
     }
     catch
     {
@@ -331,6 +343,8 @@ function set_custom_role_privileges
 
         $JsonBody = @{"OemPrivileges"=$authority}|ConvertTo-Json -Compress
         $response = Invoke-WebRequest -Uri $url_dest_role -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
+
+        Write-Host "update role auth successful"
         return $True
     }
     catch
