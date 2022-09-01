@@ -105,14 +105,13 @@ function lenovo_create_bmc_user
         #Get accounts resource
         $url_accounts = "https://$ip" + $converted_object_account_service.Accounts."@odata.id"
         $response = Invoke-WebRequest -Uri $url_accounts -Headers $JsonHeader -Method Get -UseBasicParsing 
-        $converted_object = $response.Content | ConvertFrom-Json
+        $converted_object_account = $response.Content | ConvertFrom-Json
 
         $create_mode = "POST_Action"
         if(!$response.Headers['Allow'].contains('POST'))
         {
             $create_mode = "PATCH_Action"
         }
-
         if($create_mode -eq "POST_Action")
         {
             #Set rolename
@@ -130,7 +129,6 @@ function lenovo_create_bmc_user
             {
                 $role_name = $authority[0]
             }
-
             $JsonBody = @{ "Password"=$newuserpassword
                 "Name"=$newusername
                 "UserName"=$newusername
@@ -139,110 +137,118 @@ function lenovo_create_bmc_user
                 } | ConvertTo-Json -Compress
 
             $response = Invoke-WebRequest -Uri $url_accounts -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-
             Write-Host
             [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
             return $True
         }
-
-        if($create_mode -eq "PATCH_Action")
+        if ($create_mode -eq "PATCH_Action") 
         {
+            $max_account_num = $converted_object_account."Members@odata.count"
             $list_url_account = @()
-            foreach($url_account in $converted_object.Members)
+            for ($i = 0; $i -lt $max_account_num; $i++) 
             {
-                $list_url_account += $url_account."@odata.id" 
+                $account_url = "https://$ip" + $converted_object_account.Members[$i]."@odata.id"
+                $list_url_account += $account_url
             }
-
-            #Get the first empty account url
-            $url_dest = ""
+            $first_empty_account = ""
+            $flag = $False
+            $user_pos = 0
+            $num = 0
             $roleuri = ""
-            foreach($url_tmp_account in $list_url_account)
+            foreach ($account_url in $list_url_account)
             {
-                $url_account = "https://$ip" + $url_tmp_account
-                $response = Invoke-WebRequest -Uri $url_account -Headers $JsonHeader -Method Get -UseBasicParsing 
+                $num = $num + 1 
+                $response = Invoke-WebRequest -Uri $account_url -Headers $JsonHeader -Method Get -UseBasicParsing
                 $converted_object = $response.Content | ConvertFrom-Json
-
-                if($converted_object.UserName -eq "" -and $url_dest -eq "")
+                if ($response.statuscode -eq 200) 
                 {
-                    $url_dest = $url_account
-                    $roleuri = $converted_object."Links"."Role"."@odata.id"
-                    $user_pos = $url_dest.Split("/")[-1]
-                }
-                elseif($converted_object.UserName -eq $newusername)
-                {
-                    Write-Host "username $newusername is existed"
-                    return $False
+                    $account_username = $converted_object.UserName
+                    if ($account_username -eq "" -and $flag -eq $False) 
+                    {
+                        $first_empty_account = $account_url
+                        $flag = $True
+                        $user_pos = $num
+                        $roleuri = $converted_object.Link.Role."@odata.id"
+                    }
+                    elseif ($account_username -eq $newusername) 
+                    {
+                        Write-Host 
+                        [String]::Format("Username {0} is exidted",$newusername)
+                        return $False
+                    }
                 }
             }
-            if($url_dest -eq "")
+            if ($first_empty_account -eq "") 
             {
-                Write-Host "accounts is full,can't create a new account"
+                Write-Host "Accounts is full,can't create a new account"
                 return $False
             }
-        }
-        if("Supervisor"  -in $authority -or "Administrator" -in $authority)
-        {
-            $role_name = "Administrator"
-        }elseif("Operator"  -in $authority)
-        {
-            $role_name = "Operator"
-        }elseif("ReadOnly"  -in $authority)
-        {
-            $role_name = "ReadOnly"
-        }
-        $role_name = "CustomRole" + [string]$user_pos
-        $links_role = @{}
-        $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
-        if($result -ne $True)
-        {
-            $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
-            if($result -ne $True)
+            $links_role = @{}
+            if ("Supervisor" -in $authority -or "Administrator" -in $authority) 
             {
-                return $False
+                $role_name = "Administrator"
             }
-        }elseif(-not ($role_name -in $roleuri))
-        {
-            $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
+            elseif ("Operator" -in $authority) 
+            {
+                $role_name = "Operator"
+            }
+            elseif ("ReadOnly" -in $authority) 
+            {
+                $role_name = "ReadOnly"
+            }
+            else 
+            {
+                $role_name = "CustomRole" + [String]$user_pos
+                $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
+                if($result -ne $True)
+                {
+                    $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
+                    if($result -ne $True)
+                    {
+                        return $False
+                    }
+                }
+                elseif ($role_name -notin $roleuri) 
+                {
+                    $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
+                }
+            }
+            $response_empty_account_url = Invoke-WebRequest -Uri $first_empty_account -Headers $JsonHeader -Method Get -UseBasicParsing
+            $converted_object = $response_empty_account_url.Content | ConvertFrom-Json
+            if ($converted_object.Keys -contains "@odata.etag") 
+            {
+                $etag = $converted_object."@odata.etag"
+            }
+            else {
+                $etag = ""
+            }
+            $JsonHeader = @{"If-Match" = $etag}
+            if ($link_role) 
+            {
+                $JsonBody = @{ 
+                    "Password"=$newuserpassword
+                    "UserName"=$newusername
+                    "RoleId"=$role_name
+                    "Enabled" = $true
+                    "Links" = $links_role
+                } | ConvertTo-Json -Compress
+            }
+            else 
+            {
+                $JsonBody = @{ 
+                    "Password"=$newuserpassword
+                    "UserName"=$newusername
+                    "RoleId"=$role_name
+                    "Enabled" = $true
+                } | ConvertTo-Json -Compress
+            }
+            $response = Invoke-WebRequest -Uri $first_empty_account -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
+            if ($response.statuscode -in (200,204)) 
+            {
+                Write-Host "Created new user successfully"
+                return $True
+            }
         }
-        if(-not ($role_name -in $roleuri))
-        {
-            $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
-        }
-
-        $response = Invoke-WebRequest -Uri $url_dest -Headers $JsonHeader -Method Get -UseBasicParsing 
-        $converted_object = $response.Content | ConvertFrom-Json
-
-        if($converted_object.'@odata.etag' -ne $null)
-        {
-            $JsonHeader["If-Match"] = $converted_object.'@odata.etag'
-        }
-        else
-        {
-            $JsonHeader["If-Match"] = ""
-        }
-            
-        if($links_role.keys -contains "Role")
-        {
-            $JsonBody = @{ "Password"=$newuserpassword
-                "UserName"=$newusername
-                "RoleId"=$role_name
-                "Enabled" = $true
-                "Links" = $links_role
-            } | ConvertTo-Json -Compress
-        }
-        else
-        {
-            $JsonBody = @{ "Password"=$newuserpassword
-                "UserName"=$newusername
-                "RoleId"=$role_name
-                "Enabled" = $true
-            } | ConvertTo-Json -Compress
-        }
-       
-        $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-        Write-Host
-        [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
-        return $True
     }
     catch
     {
@@ -307,11 +313,7 @@ function set_custom_role_privileges
 ,"AdapterConfiguration_NetworkingAndSecurity","AdapterConfiguration_Advanced")
         foreach($auth in $authority)
         {
-            if($auth -in $list_auth)
-            {
-                continue
-            }
-            else
+            if($auth -notin $list_auth)
             {
                 Write-Host "custom privileges out of rang"
                 return $False
@@ -344,8 +346,6 @@ function set_custom_role_privileges
 
         $JsonBody = @{"OemPrivileges"=$authority}|ConvertTo-Json -Compress
         $response = Invoke-WebRequest -Uri $url_dest_role -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-
-        Write-Host "update role auth successful"
         return $True
     }
     catch
