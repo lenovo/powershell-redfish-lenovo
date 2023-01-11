@@ -112,7 +112,6 @@ function lenovo_create_bmc_user
         {
             $create_mode = "PATCH_Action"
         }
-
         if($create_mode -eq "POST_Action")
         {
             #Set rolename
@@ -130,16 +129,13 @@ function lenovo_create_bmc_user
             {
                 $role_name = $authority[0]
             }
-
             $JsonBody = @{ "Password"=$newuserpassword
                 "Name"=$newusername
                 "UserName"=$newusername
                 "RoleId"=$role_name
                 "Enabled" = $true
                 } | ConvertTo-Json -Compress
-
             $response = Invoke-WebRequest -Uri $url_accounts -Method Post -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-
             Write-Host
             [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
         }
@@ -151,7 +147,6 @@ function lenovo_create_bmc_user
             {
                 $list_url_account += $url_account."@odata.id" 
             }
-
             #Get the first empty account url
             $url_dest = ""
             $roleuri = ""
@@ -178,59 +173,69 @@ function lenovo_create_bmc_user
                 Write-Host "accounts is full,can't create a new account"
                 return $False
             }
-        }
-
-        $role_name = "CustomRole" + [string]$user_pos
-        $links_role = @{}
-        $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
-        if($result -ne $True)
-        {
-            $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
-            if($result -ne $True)
+            $links_role = @{}
+            if ("Supervisor" -in $authority -or "Administrator" -in $authority) 
             {
-                return $False
+                $role_name = "Administrator"
             }
-        }elseif(-not ($role_name -in $roleuri))
-        {
-            $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
+            elseif ("Operator" -in $authority) 
+            {
+                $role_name = "Operator"
+            }
+            elseif ("ReadOnly" -in $authority) 
+            {
+                $role_name = "ReadOnly"
+            }
+            else{
+                $role_name = "CustomRole" + [string]$user_pos
+                $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
+                if($result -ne $True)
+                {
+                    $result = set_custom_role_privileges -bmcip $ip -session $session -response $converted_object_account_service -rolename $role_name -authority $authority
+                    if($result -ne $True)
+                    {
+                        return $False
+                    }
+                }elseif(-not ($role_name -in $roleuri))
+                {
+                    $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
+                }
+                if(-not ($role_name -in $roleuri))
+                {
+                    $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
+                }
+            }
+            $response = Invoke-WebRequest -Uri $url_dest -Headers $JsonHeader -Method Get -UseBasicParsing 
+            $converted_object = $response.Content | ConvertFrom-Json
+            if($converted_object.'@odata.etag' -ne $null)
+            {
+                $JsonHeader["If-Match"] = $converted_object.'@odata.etag'
+            }
+            else
+            {
+                $JsonHeader["If-Match"] = ""
+            }
+                
+            if($links_role.keys -contains "Role")
+            {
+                $JsonBody = @{ "Password"=$newuserpassword
+                    "UserName"=$newusername
+                    "RoleId"=$role_name
+                    "Enabled" = $true
+                    "Links" = $links_role
+                } | ConvertTo-Json -Compress
+            }else
+            {
+                $JsonBody = @{ "Password"=$newuserpassword
+                    "UserName"=$newusername
+                    "RoleId"=$role_name
+                    "Enabled" = $true
+                } | ConvertTo-Json -Compress
+            }
+            $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
+            Write-Host
+            [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
         }
-        if(-not ($role_name -in $roleuri))
-        {
-            $links_role["Role"]=@{"@odata.id"="/redfish/v1/AccountService/Roles/"+$role_name}
-        }
-
-        $response = Invoke-WebRequest -Uri $url_dest -Headers $JsonHeader -Method Get -UseBasicParsing 
-        $converted_object = $response.Content | ConvertFrom-Json
-
-        if($converted_object.'@odata.etag' -ne $null)
-        {
-            $JsonHeader["If-Match"] = $converted_object.'@odata.etag'
-        }
-        else
-        {
-            $JsonHeader["If-Match"] = ""
-        }
-            
-        if($links_role.keys -contains "Role")
-        {
-            $JsonBody = @{ "Password"=$newuserpassword
-                "UserName"=$newusername
-                "RoleId"=$role_name
-                "Enabled" = $true
-                "Links" = $links_role
-            } | ConvertTo-Json -Compress
-        }else
-        {
-            $JsonBody = @{ "Password"=$newuserpassword
-                "UserName"=$newusername
-                "RoleId"=$role_name
-                "Enabled" = $true
-            } | ConvertTo-Json -Compress
-        }
-       
-        $response = Invoke-WebRequest -Uri $url_dest -Method Patch -Headers $JsonHeader -Body $JsonBody -ContentType 'application/json'
-        Write-Host
-        [String]::Format("- PASS, statuscode {0} returned successfully to create account {1}",$response.StatusCode,$newusername)
     }
     catch
     {
