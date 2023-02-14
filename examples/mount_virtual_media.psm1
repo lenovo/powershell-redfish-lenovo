@@ -116,8 +116,6 @@ function mount_virtual_media
     
     try
     {
-        Ignore_SSLCertificates
-
         # Set BMC access credential
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::TLS12
         $bmc_username = $username
@@ -125,15 +123,15 @@ function mount_virtual_media
         $bmc_password_secure = ConvertTo-SecureString $bmc_password -AsPlainText -Force
         $bmc_credential = New-Object System.Management.Automation.PSCredential($bmc_username, $bmc_password_secure)
 
-        # $session_key = ""
-        # $session_location = ""
-        
-        # # Create session
-        # $session = create_session -ip $ip -username $username -password $password
-        # $session_key = $session.'X-Auth-Token'
-        # $session_location = $session.Location
-
-        # $JsonHeader = @{"X-Auth-Token" = $session_key}
+        # Add alias Invoke-WebRequest to support PowerShell5 and above.
+        if ($ver -gt 5) 
+        {
+            Get-Alias -Name Invoke-WebRequest 2>&1 > $null
+            if (-not $?)
+            {
+                new-Alias -Name 'Invoke-WebRequest' -Value 'lenovo_invoke_webrequest' -Scope Global
+            }
+        }
     
         # Get the manager url collection
         $manager_url_collection = @()
@@ -288,12 +286,13 @@ function mount_virtual_media
         }
         return $False
     } 
-    # Delete existing session whether script exit successfully or not
-    # finally
-    # {
-    #     if ($session_key -ne "")
-    #     {
-    #         delete_session -ip $ip -session $session
-    #     }
-    # }
+    # Delete alias Invoke-WebRequest if it existed
+    finally
+    {
+        Get-Alias -Name Invoke-WebRequest 2>&1 > $null
+        if ($?)
+        {
+            Remove-Item 'Alias:\Invoke-WebRequest' -Force
+        }
+    }
 }
