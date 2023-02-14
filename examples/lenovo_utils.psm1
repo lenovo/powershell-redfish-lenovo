@@ -19,34 +19,104 @@
 # under the License.
 ###
 
+
+
 # Ignore SSL Certificates
 function Ignore_SSLCertificates
 {
-    $Provider = New-Object Microsoft.CSharp.CSharpCodeProvider
-    $Compiler = $Provider.CreateCompiler()
-    $Params = New-Object System.CodeDom.Compiler.CompilerParameters
-    $Params.GenerateExecutable = $false
-    $Params.GenerateInMemory = $true
-    $Params.IncludeDebugInformation = $false
-    $Params.ReferencedAssemblies.Add("System.DLL") > $null
-    $TASource=@'
-        namespace Local.ToolkitExtensions.Net.CertificatePolicy
-        {
-            public class TrustAll : System.Net.ICertificatePolicy
+    if (-not ([System.Management.Automation.PSTypeName]"TrustEverything").Type)
+    {
+        Add-Type -TypeDefinition  @"
+            using System.Net.Security;
+            using System.Security.Cryptography.X509Certificates;
+            public static class TrustEverything
             {
-                public bool CheckValidationResult(System.Net.ServicePoint sp,System.Security.Cryptography.X509Certificates.X509Certificate cert, System.Net.WebRequest req, int problem)
-                {
-                    return true;
-                }
+                private static bool ValidationCallback(object sender, X509Certificate certificate, X509Chain chain,
+                    SslPolicyErrors sslPolicyErrors) { return true; }
+                public static void SetCallback() { System.Net.ServicePointManager.ServerCertificateValidationCallback = ValidationCallback; }
+                public static void UnsetCallback() { System.Net.ServicePointManager.ServerCertificateValidationCallback = null; }
         }
+"@
     }
-'@ 
-    $TAResults=$Provider.CompileAssemblyFromSource($Params,$TASource)
-    $TAAssembly=$TAResults.CompiledAssembly
-    ## We create an instance of TrustAll and attach it to the ServicePointManager
-    $TrustAll = $TAAssembly.CreateInstance("Local.ToolkitExtensions.Net.CertificatePolicy.TrustAll")
-    [System.Net.ServicePointManager]::CertificatePolicy = $TrustAll
+    [TrustEverything]::SetCallback()
 }
+
+$version = $PSVersionTable.PSVersion
+[int]$Global:ver = $version.Major
+
+if ($ver -le 5) 
+{
+    Ignore_SSLCertificates
+}
+
+# for supporting Powershell 5 above 
+function lenovo_invoke_webrequest {
+    [CmdletBinding()] 
+    param(
+        [Parameter(Mandatory=$False)]
+        [AllowNull()]
+        [switch] $UseBasicParsing,
+        [Parameter(Mandatory=$True)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Uri,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [Hashtable] $Headers,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [PSCredential] $Credential,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [switch] $SkipCertificateCheck,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [Switch] $SkipHeaderValidation,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Method,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Body,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [string] $ContentType,
+        [Parameter(Mandatory=$False)]
+        [ValidateNotNullOrEmpty()]
+        [Switch] $DisableKeepAlive
+        )
+
+    if ($Method -eq 'get') {
+        if ($Headers) 
+        {
+            $response = Microsoft.PowerShell.Utility\Invoke-WebRequest -Uri $Uri -Method $Method -Headers $Headers -UseBasicParsing -SkipCertificateCheck -SkipHeaderValidation
+        }
+        else
+        {
+            $response = Microsoft.PowerShell.Utility\Invoke-WebRequest -Uri $Uri -Method $Method -Credential $Credential -UseBasicParsing -SkipCertificateCheck -SkipHeaderValidation
+        }
+    }elseif($Method -eq 'delete'){
+        if ($Headers) 
+        {
+            $response = Microsoft.PowerShell.Utility\Invoke-WebRequest -Uri $Uri -Method $Method -Headers $Headers -DisableKeepAlive -UseBasicParsing -SkipCertificateCheck 
+        }
+        else 
+        {
+            $response = Microsoft.PowerShell.Utility\Invoke-WebRequest -Uri $Uri -Method $Method -Credential $Credential -DisableKeepAlive -UseBasicParsing -SkipCertificateCheck
+        }
+    }else{
+        if ($Headers) 
+        {
+            $response = Microsoft.PowerShell.Utility\Invoke-WebRequest -Uri $Uri -Method $Method -Headers $Headers -Body $Body -ContentType 'application/json' -UseBasicParsing -SkipCertificateCheck
+        }
+        else
+        {
+            $response = Microsoft.PowerShell.Utility\Invoke-WebRequest -Uri $Uri -Method $Method -Credential $Credential -Body $Body -ContentType 'application/json' -UseBasicParsing -SkipCertificateCheck
+        }      
+    }
+
+    return $response
+}
+
 
 function create_session
 {
@@ -57,7 +127,7 @@ function create_session
     Create session, aqcuire session key for further http requests, and session location for session termination
     - ip: Pass in BMC IP address
     - username: Pass in BMC username
-    - password: Pass in BMC username password
+    - password: Pass in BMC password
    #>
     param(
         [Parameter(Mandatory=$True)]
@@ -71,8 +141,6 @@ function create_session
         [string] $password
         )
 
-    Ignore_SSLCertificates
-
     # Set BMC access credential
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::TLS12
     $bmc_username = $username
@@ -80,11 +148,19 @@ function create_session
     $bmc_password_secure = ConvertTo-SecureString $bmc_password -AsPlainText -Force
     $bmc_credential = New-Object System.Management.Automation.PSCredential($bmc_username, $bmc_password_secure)
 
+    if ($ver -gt 5) 
+    {
+        Get-Alias -Name Invoke-WebRequest 2>&1 > $null
+        if (-not $?)
+        {
+            new-Alias -Name 'Invoke-WebRequest' -Value 'lenovo_invoke_webrequest' -Scope Global
+        }
+    }
+
     $base_url = "https://$ip/redfish/v1/"
 
     # Get SessionService url
     $response = Invoke-WebRequest -Uri $base_url -Method Get -Credential $bmc_credential -UseBasicParsing
-
     $converted_object = $response.Content | ConvertFrom-Json
     $hash_table = @{}
     $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
@@ -103,10 +179,7 @@ function create_session
 
     # Create session and acquire session info
     $response = Invoke-WebRequest -UseBasicParsing -Uri $session_url_string -Method Post -Body $JsonBody -ContentType 'application/json'
-
-    $session = New-Object PSObject
-    $session|Add-Member -MemberType NoteProperty 'X-Auth-Token' $response.headers.'X-Auth-Token'
-    $session|Add-Member -MemberType NoteProperty 'Location' $response.headers.Location
+    $session = @{"X-Auth-Token" = [string]$response.headers.'X-Auth-Token'; "Location" = [string]$response.headers.Location} 
 
     return $session
 }
@@ -132,17 +205,25 @@ function delete_session
 
     $session_key = $session.'X-Auth-Token'
     $session_location = $session.Location
-
-    $JsonHeader = @{ 'X-Auth-Token' = $session_key
-    }
+    $JsonHeader = @{"X-Auth-Token" = $session_key}
 
     # Complete the url if it's not start with proper format
     if($session_location.startswith('http') -eq $False)
     {
         $session_location = "https://$ip" + $session_location
     }
-
-    $response = Invoke-WebRequest -UseBasicParsing -Uri $session_location -Headers $JsonHeader -Method Delete -DisableKeepAlive
+    try
+    {
+        $response = Invoke-WebRequest -UseBasicParsing -Uri $session_location -Headers $JsonHeader -Method Delete -DisableKeepAlive
+    }
+    finally
+    {
+        Get-Alias -Name Invoke-WebRequest 2>&1 > $null
+        if ($?)
+        {
+            Remove-Item 'Alias:\Invoke-WebRequest' -Force
+        }
+    }
 }
 
 function get_system_urls
@@ -174,8 +255,8 @@ function get_system_urls
     # Get the system url collection via Invoke-WebRequest
     $base_url = "https://$bmcip/redfish/v1/"
     $session_key = $session.'X-Auth-Token'
-    $JsonHeader = @{ 'X-Auth-Token' = $session_key
-    }
+    $JsonHeader = @{"X-Auth-Token" = $session_key}
+
     $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
     $converted_object = $response.Content | ConvertFrom-Json
     $systems_url = $converted_object.Systems."@odata.id"
