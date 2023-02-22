@@ -1,145 +1,145 @@
-| Category           | Script Name                                | ThinkSystem        | ThinkSystem    | ThinkSystem v2  |
-|                    |                                            | AMD 2P(Rome/Milan) | Intel(Purley)  | Intel(Whitley)  |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Inventory          | get_bmc_inventory.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | get_cpu_inventory.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | get_fan_inventory.psm1                     |        Yes         |     Yes *2     |     Yes *2      |
-|                    | get_memory_inventory.psm1                  |        Yes         |     Yes        |     Yes         |
-|                    | get_nic_inventory.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | get_pci_inventory.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | get_psu_inventory.psm1                     |        Yes         |     Yes *2     |     Yes *2      |
-|                    | get_power_redundancy.psm1                  |        Yes         |     Yes *2     |     Yes *2      |
-|                    | get_storage_inventory.psm1                 |        Yes         |     Yes        |     Yes         |
-|                    | get_system_inventory.psm1                  |        Yes         |     Yes        |     Yes         |
-|                    | get_chassis_inventory.psm1                 |        Yes         |     Yes        |     Yes         |
-|                    | get_temperatures_inventory.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_get_cpu_inventory.psm1              |        Yes         |     Yes        |     Yes         |
-|                    | get_volt_inventory.psm1                    |        Yes         |     Yes        |     Yes         |
-|                    | get_chassis_inventory.psm1                 |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|--------------- |-----------------|
-| Power Control      | get_power_state.psm1                       |        Yes         |     Yes        |     Yes         |
-|                    | get_system_reset_types.psm1                |        Yes         |     Yes        |     Yes         |
-|                    | set_power_state.psm1                       |        Yes         |     Yes        |     Yes         |
-|                    | restart_bmc.psm1                           |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Event Log          | get_system_log.psm1                        |        Yes         |     Yes        |     Yes         |
-|                    | clear_system_log.psm1                      |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_export_ffdc_data.psm1               |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Event subscription | get_event_subscriptions.psm1               |        Yes         |     Yes        |     Yes         |
-|                    | add_event_subscriptions.psm1               |        Yes         |     Yes        |     Yes         |
-|                    | del_event_subscriptions.psm1               |        Yes         |     Yes        |     Yes         |
-|                    | send_test_event.psm1                       |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_add_alert_recipient.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_del_alert_recipient.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_get_alert_recipients.psm1           |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| BIOS settings      | get_all_bios_attributes.psm1               |        Yes         |     Yes        |     Yes         |
-|                    | get_bios_attribute.psm1                    |        Yes         |     Yes        |     Yes         |
-|                    | set_bios_attribute.psm1                    |        Yes         |     Yes        |     Yes         |
-|                    | get_bios_attribute_metadata.psm1           |        Yes         |     Yes        |     Yes         |
-|                    | reset_bios_default.psm1                    |        Yes         |     Yes        |     Yes         |
-|                    | get_bios_bootmode.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | set_bios_bootmode_legacy.psm1              |        Yes         |     Yes        |     Yes         |
-|                    | set_bios_bootmode_uefi.psm1                |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_get_bios_boot_order.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_set_bios_boot_order.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | get_server_boot_once.psm1                  |        Yes         |     Yes        |     Yes         |
-|                    | get_server_boot_once_types.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | set_server_boot_once.psm1                  |        Yes         |     Yes        |     Yes         |
-|                    | get_secure_boot_status.psm1                |        Yes         |     Yes        |     Yes         |
-|                    | disable_secure_boot.psm1                   |        Yes         |     Yes        |     Yes         |
-|                    | enable_secure_boot.psm1                    |        Yes         |     Yes        |     Yes         |
-|                    | reset_secure_boot.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | set_bios_password.psm1                     |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| User Management    | lenovo_get_bmc_user_accounts.psm1          |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_create_bmc_user.psm1                |        Yes         |     Yes *4     |     Yes *2      |
-|                    | lenovo_delete_bmc_user.psm1                |        Yes         |     Yes        |     Yes         |
-|                    | update_bmc_user_password.psm1              |        Yes         |     Yes *4     |     Yes *2      |
-|                    | lenovo_get_bmc_user_global.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_set_bmc_user_global.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | disable_bmc_user.psm1                      |        Yes         |     Yes *4     |     Yes *2      |
-|                    | enable_bmc_user.psm1                       |        Yes *1      |     Yes *4     |     Yes *2      |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Light Path         | get_chassis_indicator_led.psm1             |        Yes         |     Yes        |     Yes         |
-|                    | set_chassis_indicator_led.psm1             |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Power Management   | get_power_limit.psm1                       |        Yes         |     Yes *2     |     Yes *2      |
-|                    | set_power_limit.psm1                       |        NO          |     Yes *2     |     Yes *2      |
-|                    | get_power_metrics.psm1                     |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| BMC Configuration  | get_bmc_ntp.psm1                           |        Yes         |     Yes *4     |     Yes *2      |
-|                    | set_bmc_ntp.psm1                           |        Yes         |     Yes *4     |     Yes *2      |
-|                    | lenovo_set_bmc_dns.psm1                    |        Yes         |     Yes *4     |     Yes         |
-|                    | get_networkprotocol_info.psm1              |        Yes         |     Yes        |     Yes         |
-|                    | set_networkprotocol.psm1                   |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_bmc_config_backup.psm1              |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_bmc_config_restore.psm1             |        Yes         |     Yes        |     Yes         |
-|                    | get_serial_interfaces.psm1                 |        Yes         |     Yes        |     Yes         |
-|                    | set_serial_interfaces.psm1                 |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_set_serial_interfaces.psm1          |        Yes         |     Yes        |     Yes         |
-|                    | get_hostinterface.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | set_bmc_timezone.psm1                      |        Yes         |     Yes *4     |     Yes         |
-|                    | set_bmc_vlanid.psm1                        |        Yes         |     Yes *4     |     Yes         |
-|                    | lenovo_set_bmc_config_default.psm1         |        Yes         |     Yes        |     Yes         |
-|                    | set_bmc_ipv4.psm1                          |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_generate_snmp_engineid.psm1         |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_get_snmp_global.psm1                |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_set_snmp_global.psm1                |        Yes         |     Yes        |     Yes         |
-|                    | update_bmc_user_snmpinfo.psm1              |        Yes         |     Yes        |     Yes         |
-|                    | set_bmc_hostname.psm1                      |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Virtual Media      | get_virtual_media.psm1                     |        Yes         |     Yes        |     Yes         |
-|                    | mount_virtual_media.psm1                   |        Yes         |     Yes        |     Yes         |
-|                    | umount_virtual_media.psm1                  |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_mount_virtual_media.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_umount_virtual_media.psm1           |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| RAID Configuration | lenovo_create_raid_volume.psm1             |        Yes *3      |     Yes        |     Yes         |
-|                    | lenovo_delete_raid_volume.psm1             |        Yes *3      |     Yes        |     Yes         |
-|                    | lenovo_update_raid_volume.psm1             |        Yes *3      |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| FW Update          | get_fw_inventory.psm1                      |        Yes         |     Yes        |     Yes         |
-|                    | update_firmware.psm1                       |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Telemetry          | get_metric_definition_report.psm1          |        Yes         |     Yes        |     Yes         |
-|                    | send_test_metric.psm1                      |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Session            | get_sessions.psm1                          |        Yes         |     Yes        |     Yes         |
-|                    | clear_sessions.psm1                        |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| License            | lenovo_bmc_license_delete.psm1             |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_bmc_license_export.psm1             |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_bmc_license_getinfo.psm1            |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_bmc_license_import.psm1             |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| LDAP               | lenovo_get_bmc_external_ldap.psm1          |        Yes         |     Yes *4     |     Yes         |
-|                    | lenovo_set_bmc_external_ldap.psm1          |        Yes         |     Yes *4     |     Yes         |
-|                    | lenovo_ldap_certificate_disable.psm1       |        Yes         |     Yes *4     |     Yes         |
-|                    | lenovo_ldap_certificate_enable.psm1        |        Yes         |     Yes *4     |     Yes         |
-|                    | lenovo_get_bmc_user_ldap_policy.psm1       |        Yes         |     Yes *4     |     Yes         |
-|                    | lenovo_set_bmc_user_ldap_policy.psm1       |        Yes         |     Yes *4     |     Yes         |
-|                    | lenovo_ldap_certificate_add.psm1           |        Yes         |     Yes *4     |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Security           | lenovo_ssl_certificate_getinfo.psm1        |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_ssl_certificate_generate_csr.psm1   |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_ssl_certificate_import.psm1         |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_get_ssh_pubkey.psm1                 |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_import_ssh_pubkey.psm1              |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_delete_ssh_pubkey.psm1              |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_httpfs_certificate_import.psm1      |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_httpfs_certificate_getinfo.psm1     |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_httpfs_certificate_enable.psm1      |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_httpfs_certificate_disable.psm1     |        Yes         |     Yes        |     Yes         |
-|                    | lenovo_httpfs_certificate_delete.psm1      |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
-| Other              | set_server_asset_tag.psm1                  |        Yes         |     Yes        |     Yes         |
-|                    | get_all_tasks.psm1                         |        Yes         |     Yes        |     Yes         |
-|                    | del_tasks.psm1                             |        Yes         |     Yes        |     Yes         |
-|                    | get_schema.psm1                            |        Yes         |     Yes        |     Yes         |
-|                    | set_system_name.psm1                       |        Yes         |     Yes        |     Yes         |
-|--------------------|--------------------------------------------|--------------------|----------------|-----------------|
+| Category           | Script Name                                | ThinkSystem        | ThinkSystem    | ThinkSystem v2  |ThinkSystem        |
+|                    |                                            | AMD 2P(Rome/Milan) | Intel(Purley)  | Intel(Whitley)  |AMD 1P(Rome/Milan) |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Inventory          | get_bmc_inventory.psm1                     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_cpu_inventory.psm1                     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_fan_inventory.psm1                     |        Yes         |     Yes *2     |     Yes *2      |       Yes         |
+|                    | get_memory_inventory.psm1                  |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_nic_inventory.psm1                     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_pci_inventory.psm1                     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_psu_inventory.psm1                     |        Yes         |     Yes *2     |     Yes *2      |       NO          |
+|                    | get_power_redundancy.psm1                  |        Yes         |     Yes *2     |     Yes *2      |       Yes         |
+|                    | get_storage_inventory.psm1                 |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_system_inventory.psm1                  |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_chassis_inventory.psm1                 |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | get_temperatures_inventory.psm1            |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | lenovo_get_cpu_inventory.psm1              |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_volt_inventory.psm1                    |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | get_chassis_inventory.psm1                 |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|--------------- |-----------------|-------------------|
+| Power Control      | get_power_state.psm1                       |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_system_reset_types.psm1                |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_power_state.psm1                       |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | restart_bmc.psm1                           |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Event Log          | get_system_log.psm1                        |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | clear_system_log.psm1                      |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | lenovo_export_ffdc_data.psm1               |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Event subscription | get_event_subscriptions.psm1               |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | add_event_subscriptions.psm1               |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | del_event_subscriptions.psm1               |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | send_test_event.psm1                       |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_add_alert_recipient.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_del_alert_recipient.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_get_alert_recipients.psm1           |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| BIOS settings      | get_all_bios_attributes.psm1               |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_bios_attribute.psm1                    |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_bios_attribute.psm1                    |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_bios_attribute_metadata.psm1           |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | reset_bios_default.psm1                    |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_bios_bootmode.psm1                     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_bios_bootmode_legacy.psm1              |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_bios_bootmode_uefi.psm1                |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_get_bios_boot_order.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_set_bios_boot_order.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_server_boot_once.psm1                  |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_server_boot_once_types.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_server_boot_once.psm1                  |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_secure_boot_status.psm1                |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | disable_secure_boot.psm1                   |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | enable_secure_boot.psm1                    |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | reset_secure_boot.psm1                     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_bios_password.psm1                     |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| User Management    | lenovo_get_bmc_user_accounts.psm1          |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | lenovo_create_bmc_user.psm1                |        Yes         |     Yes *4     |     Yes *2      |       NO          |
+|                    | lenovo_delete_bmc_user.psm1                |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | update_bmc_user_password.psm1              |        Yes         |     Yes *4     |     Yes *2      |       NO          |
+|                    | lenovo_get_bmc_user_global.psm1            |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | lenovo_set_bmc_user_global.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | disable_bmc_user.psm1                      |        Yes         |     Yes *4     |     Yes *2      |       NO          |
+|                    | enable_bmc_user.psm1                       |        Yes *1      |     Yes *4     |     Yes *2      |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Light Path         | get_chassis_indicator_led.psm1             |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | set_chassis_indicator_led.psm1             |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Power Management   | get_power_limit.psm1                       |        Yes         |     Yes *2     |     Yes *2      |       Yes         |
+|                    | set_power_limit.psm1                       |        NO          |     Yes *2     |     Yes *2      |       NO          |
+|                    | get_power_metrics.psm1                     |        Yes         |     Yes        |     Yes         |       Yes         |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| BMC Configuration  | get_bmc_ntp.psm1                           |        Yes         |     Yes *4     |     Yes *2      |       Yes         |
+|                    | set_bmc_ntp.psm1                           |        Yes         |     Yes *4     |     Yes *2      |       NO          |
+|                    | lenovo_set_bmc_dns.psm1                    |        Yes         |     Yes *4     |     Yes         |       NO          |
+|                    | get_networkprotocol_info.psm1              |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | set_networkprotocol.psm1                   |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_bmc_config_backup.psm1              |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_bmc_config_restore.psm1             |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_serial_interfaces.psm1                 |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | set_serial_interfaces.psm1                 |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_set_serial_interfaces.psm1          |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_hostinterface.psm1                     |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | set_bmc_timezone.psm1                      |        Yes         |     Yes *4     |     Yes         |       Yes         |
+|                    | set_bmc_vlanid.psm1                        |        Yes         |     Yes *4     |     Yes         |       NO          |
+|                    | lenovo_set_bmc_config_default.psm1         |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_bmc_ipv4.psm1                          |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_generate_snmp_engineid.psm1         |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_get_snmp_global.psm1                |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_set_snmp_global.psm1                |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | update_bmc_user_snmpinfo.psm1              |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | set_bmc_hostname.psm1                      |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Virtual Media      | get_virtual_media.psm1                     |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | mount_virtual_media.psm1                   |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | umount_virtual_media.psm1                  |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_mount_virtual_media.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_umount_virtual_media.psm1           |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| RAID Configuration | lenovo_create_raid_volume.psm1             |        Yes *3      |     Yes        |     Yes         |       NO          |
+|                    | lenovo_delete_raid_volume.psm1             |        Yes *3      |     Yes        |     Yes         |       NO          |
+|                    | lenovo_update_raid_volume.psm1             |        Yes *3      |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| FW Update          | get_fw_inventory.psm1                      |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | update_firmware.psm1                       |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Telemetry          | get_metric_definition_report.psm1          |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | send_test_metric.psm1                      |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Session            | get_sessions.psm1                          |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | clear_sessions.psm1                        |        Yes         |     Yes        |     Yes         |       Yes         |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| License            | lenovo_bmc_license_delete.psm1             |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_bmc_license_export.psm1             |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_bmc_license_getinfo.psm1            |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_bmc_license_import.psm1             |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| LDAP               | lenovo_get_bmc_external_ldap.psm1          |        Yes         |     Yes *4     |     Yes         |       Yes         |
+|                    | lenovo_set_bmc_external_ldap.psm1          |        Yes         |     Yes *4     |     Yes         |       NO          |
+|                    | lenovo_ldap_certificate_disable.psm1       |        Yes         |     Yes *4     |     Yes         |       NO          |
+|                    | lenovo_ldap_certificate_enable.psm1        |        Yes         |     Yes *4     |     Yes         |       NO          |
+|                    | lenovo_get_bmc_user_ldap_policy.psm1       |        Yes         |     Yes *4     |     Yes         |       NO          |
+|                    | lenovo_set_bmc_user_ldap_policy.psm1       |        Yes         |     Yes *4     |     Yes         |       NO          |
+|                    | lenovo_ldap_certificate_add.psm1           |        Yes         |     Yes *4     |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Security           | lenovo_ssl_certificate_getinfo.psm1        |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_ssl_certificate_generate_csr.psm1   |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_ssl_certificate_import.psm1         |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_get_ssh_pubkey.psm1                 |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_import_ssh_pubkey.psm1              |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_delete_ssh_pubkey.psm1              |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_httpfs_certificate_import.psm1      |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_httpfs_certificate_getinfo.psm1     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_httpfs_certificate_enable.psm1      |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_httpfs_certificate_disable.psm1     |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | lenovo_httpfs_certificate_delete.psm1      |        Yes         |     Yes        |     Yes         |       NO          |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
+| Other              | set_server_asset_tag.psm1                  |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_all_tasks.psm1                         |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | del_tasks.psm1                             |        Yes         |     Yes        |     Yes         |       NO          |
+|                    | get_schema.psm1                            |        Yes         |     Yes        |     Yes         |       Yes         |
+|                    | set_system_name.psm1                       |        Yes         |     Yes        |     Yes         |       Yes         |
+|--------------------|--------------------------------------------|--------------------|----------------|-----------------|-------------------|
 
 *1: After enabling user, may request changing password for first login
 *2: Not supported for SN550 (v2), SN850 (v2), SD530, SD650 (v2). 
@@ -149,5 +149,6 @@
 ThinkSystem AMD 2P (Rome/Milan): SR645, SR665
 ThinkSystem Intel (Purley):      SR530, SR550, SR570, SR590, SR630,  SR650, SR670, SR850P, SR860, SR950, SD530, SD650, SN550, SN850, ST550
 ThinkSystem v2 Intel (Whitley):  SR850 v2, SR860 v2
+ThinkSystem AMD 1P (Rome/Milan): SR635, SR655
 
 Note: on different products, there will be little different behaviors and properties per hardware design and Redfish spec/schema supported.
