@@ -83,28 +83,34 @@ function get_virtual_media
     
         # Get the manager url collection
         $manager_url_collection = @()
+        $root_virtual_media_urls = @()
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
 
         
+        $systems_url = $converted_object.Systems."@odata.id"
         $managers_url = $converted_object.Managers."@odata.id"
-        $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
-    
-        # Convert response content to hash table
-        $converted_object = $response.Content | ConvertFrom-Json
-        $hash_table = @{}
-        $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-        
-        # Set the $manager_url_collection
-        foreach ($i in $hash_table.Members)
-        {
-            $i = [string]$i
-            $manager_url_string = ($i.Split("=")[1].Replace("}",""))
-            $manager_url_collection += $manager_url_string
-        }
+        $root_virtual_media_urls += $systems_url
+        $root_virtual_media_urls += $managers_url
 
+        foreach ($root in $root_virtual_media_urls){
+            $managers_url_string = "https://$ip" + $root
+            $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
+            
+            # Convert response content to hash table
+            $converted_object = $response.Content | ConvertFrom-Json
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            
+            # Set the $manager_url_collection
+            foreach ($i in $hash_table.Members)
+            {
+                $i = [string]$i
+                $manager_url_string = ($i.Split("=")[1].Replace("}",""))
+                $manager_url_collection += $manager_url_string
+            }
+        }
         # Loop all Manager resource instance in $manager_url_collection
         foreach ($manager_url_string in $manager_url_collection)
         {
@@ -115,6 +121,9 @@ function get_virtual_media
             # Get the virtual media url
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
+            if($converted_object."VirtualMedia"."@odata.id" -eq $null){
+                continue
+            }
             $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
 
             # Get the virtual media response resource
