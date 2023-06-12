@@ -88,7 +88,7 @@ function get_virtual_media
         $converted_object = $response.Content | ConvertFrom-Json
 
         
-        $managers_url = $converted_object.Managers."@odata.id"
+        $managers_url = $converted_object.Systems."@odata.id"
         $managers_url_string = "https://$ip" + $managers_url
         $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
     
@@ -116,6 +116,12 @@ function get_virtual_media
             $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
+            if($converted_object."VirtualMedia"."@odata.id" -eq $null)
+            {
+                $parts = $manager_url_string -split "/"
+                $converted_object = "/redfish/v1/Managers/" + $parts[-1] + "/VirtualMedia"
+                $uri_virtual_media ="https://$ip" + $converted_object
+            }
 
             # Get the virtual media response resource
             $response = Invoke-WebRequest -Uri $uri_virtual_media -Headers $JsonHeader -Method Get -UseBasicParsing
