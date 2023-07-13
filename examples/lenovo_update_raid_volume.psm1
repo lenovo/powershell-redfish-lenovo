@@ -174,7 +174,7 @@ function lenovo_update_raid_volume
                             $volume_url_ret = $volume_info.split(";")[1]
                             if($volume_name_ret -eq $volume_name)
                             {
-                                if($volume_url -eq "")
+                                if($volume_url -eq "" -or $volume_url -eq $null)
                                 {
                                     $volume_url = $volume_url_ret
                                 }
@@ -189,7 +189,7 @@ function lenovo_update_raid_volume
                 }
             }
 
-            if($volume_url -eq "")
+            if($volume_url -eq "" -or $volume_url -eq $null)
             {
                 Write-Host "Error: Failed to found storage that can be configured"
                 return $False
