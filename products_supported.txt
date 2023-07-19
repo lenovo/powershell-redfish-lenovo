@@ -111,7 +111,7 @@
 |--------------------|--------------------------------------------|--------------------|----------------|-----------------|-----------------|-----------------|
 | License            | lenovo_bmc_license_delete.psm1             |        Yes         |     Yes        |     Yes         |     Yes         |     Yes         |
 |                    | lenovo_bmc_license_export.psm1             |        Yes         |     Yes        |     Yes         |     NO          |     NO          |
-|                    | lenovo_bmc_license_getinfo.psm1            |        Yes         |     Yes        |     Yes         |	    Yes         |     Yes         |
+|                    | lenovo_bmc_license_getinfo.psm1            |        Yes         |     Yes        |     Yes         |     Yes         |     Yes         |
 |                    | lenovo_bmc_license_import.psm1             |        Yes         |     Yes        |     Yes         |     Yes         |     Yes         |
 |--------------------|--------------------------------------------|--------------------|----------------|-----------------|-----------------|-----------------|
 | LDAP               | lenovo_get_bmc_external_ldap.psm1          |        Yes         |     Yes *4     |     Yes         |     Yes         |     Yes         |
