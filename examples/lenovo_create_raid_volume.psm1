@@ -190,7 +190,7 @@ function lenovo_create_raid_volume
                     if ($list_raid_volume_num[$raid_index] -ne 0){
                         continue
                     }
-                    if ($target_raid_volumes_url -eq ""){
+                    if ($target_raid_volumes_url -eq "" -or $target_raid_volumes_url -eq $null){
                         $target_raid_volumes_url = $list_raid_volume_urls[$raid_index]
                     }
                     else{
@@ -199,7 +199,7 @@ function lenovo_create_raid_volume
                     }
                 }
             }
-            if ($target_raid_volumes_url -eq ""){
+            if ($target_raid_volumes_url -eq "" -or $target_raid_volumes_url -eq $null){
                 Write-Host "Failed to found storage that can be configured"
                 return $False
             }
