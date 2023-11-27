@@ -86,41 +86,47 @@ function umount_virtual_media
 
         $JsonHeader = @{"X-Auth-Token" = $session_key}
     
-        # Get the manager url collection
-        $manager_url_collection = @()
+        # Get the system url collection
+        $system_url_collection = @()
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
         $converted_object = $response.Content | ConvertFrom-Json
 
         
-        $managers_url = $converted_object.Managers."@odata.id"
-        $managers_url_string = "https://$ip" + $managers_url
-        $response = Invoke-WebRequest -Uri $managers_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
+        $systems_url = $converted_object.Systems."@odata.id"
+        $systems_url_string = "https://$ip" + $systems_url
+        $response = Invoke-WebRequest -Uri $systems_url_string -Headers $JsonHeader -Method Get -UseBasicParsing  
     
         # Convert response content to hash table
         $converted_object = $response.Content | ConvertFrom-Json
         $hash_table = @{}
         $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
         
-        # Set the $manager_url_collection
+        # Set the $system_url_collection
         foreach ($i in $hash_table.Members)
         {
             $i = [string]$i
-            $manager_url_string = ($i.Split("=")[1].Replace("}",""))
-            $manager_url_collection += $manager_url_string
+            $system_url_string = ($i.Split("=")[1].Replace("}",""))
+            $system_url_collection += $system_url_string
         }
 
-        # Loop all Manager resource instance in $manager_url_collection
-        foreach ($manager_url_string in $manager_url_collection)
+        # Loop all System resource instance in $system_url_collection
+        foreach ($system_url_string in $system_url_collection)
         {
         
-            # Get servicedata uri from the Manager resource instance
-            $uri_address_manager = "https://$ip" + $manager_url_string
+            # Get servicedata uri from the System resource instance
+            $uri_address_system = "https://$ip" + $system_url_string
 
             # Get the virtual media url
-            $response = Invoke-WebRequest -Uri $uri_address_manager -Headers $JsonHeader -Method Get -UseBasicParsing
+            $response = Invoke-WebRequest -Uri $uri_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
+            if ($converted_object."VirtualMedia"."@odata.id" -eq $null)
+            {
+                $parts = $system_url_string -split "/"
+                $managers_url_string = "/redfish/v1/Managers/" + $parts[-1] + "/VirtualMedia"
+                $uri_virtual_media ="https://$ip" + $managers_url_string
+            }
 
             $uri_remote_map ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteMap"."@odata.id"
             $uri_remote_control ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteControl"."@odata.id"
