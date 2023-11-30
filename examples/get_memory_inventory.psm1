@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get the memory inventory
 #
@@ -128,7 +128,7 @@ function get_memory_inventory
                 }
                 
                 # Output result
-                ConvertOutputHashTableToObject $ht_memory_info
+                ConvertOutputHashTableToObject $ht_memory_info | ConvertTo-Json
             }
         }
     }

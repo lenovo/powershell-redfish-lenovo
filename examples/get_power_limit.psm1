@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get power limit
 #
@@ -99,6 +99,36 @@ function get_power_limit
             $ht_links = @{}
             $converted_object.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
             
+            if ($converted_object.psobject.Properties.name -match "Controls"){
+                #Get controls_url resource
+                $controls_url = "https://$ip" + $converted_object.Controls."@odata.id"
+                $response = Invoke-WebRequest -Uri $controls_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $controls_converted_object = $response.Content | ConvertFrom-Json
+
+                #get power_limit info
+                $hash_table = @{}
+                $controls_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                foreach($i in $hash_table.Members)
+                {
+                    $control_url = "https://$ip" + $i.'@odata.id'
+                    $response = Invoke-WebRequest -Uri $control_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $control_converted_object = $response.Content | ConvertFrom-Json
+
+                    $hash_tmp = @{}
+                    $control_converted_object.psobject.properties | Foreach { $hash_tmp[$_.Name] = $_.Value }
+                    $ht_limit_info = @{}
+                    foreach($key in $hash_tmp.Keys)
+                    {
+                        if($key -notin 'RelatedItem', '@odata.id', '@odata.etag', 'Sensor', '@odata.type', '@odata.context')
+                        {
+                            $ht_limit_info[$key] = $hash_tmp[$key]
+                        }
+                    }
+                    # Output result
+                    ConvertOutputHashTableToObject $ht_limit_info
+                }
+            }
+            
             #Get powerl_url resource
             $thermal_url = "https://$ip" + $converted_object.Power."@odata.id"
             $response = Invoke-WebRequest -Uri $thermal_url -Headers $JsonHeader -Method Get -UseBasicParsing
@@ -115,7 +145,7 @@ function get_power_limit
                     $power_limit.psobject.properties | Foreach { $ht_limit_info[$_.Name] = $_.Value }
                 }
                 # Output result
-                $power_limit | ConvertTo-Json -Depth 10
+                $power_limit
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get the System information
 #
@@ -104,15 +104,41 @@ function get_system_inventory
             $url_address_system = "https://$ip" + $system_url_string
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
-            $ht_system_info["HostName"] = $converted_object.HostName
-            $ht_system_info["Model"] = $converted_object.Model
-            $ht_system_info["SerialNumber"] = $converted_object.SerialNumber
-            $ht_system_info["AssetTag"] = $converted_object.AssetTag
-            $ht_system_info["UUID"] = $converted_object.UUID
-            $ht_system_info["ProcesorsModel"] = $converted_object.ProcessorSummary.Model
-            $ht_system_info["ProcesorsCount"] = $converted_object.ProcessorSummary.Count
-            $ht_system_info["TotalSystemMemoryGiB"] = $converted_object.MemorySummary.TotalSystemMemoryGiB
-            $ht_system_info["BiosVersion"] = $converted_object.BiosVersion
+            # $ht_system_info["HostName"] = $converted_object.HostName
+            # $ht_system_info["Model"] = $converted_object.Model
+            # $ht_system_info["SerialNumber"] = $converted_object.SerialNumber
+            # $ht_system_info["AssetTag"] = $converted_object.AssetTag
+            # $ht_system_info["UUID"] = $converted_object.UUID
+            # $ht_system_info["ProcesorsModel"] = $converted_object.ProcessorSummary.Model
+            # $ht_system_info["ProcesorsCount"] = $converted_object.ProcessorSummary.Count
+            # $ht_system_info["TotalSystemMemoryGiB"] = $converted_object.MemorySummary.TotalSystemMemoryGiB
+            # $ht_system_info["BiosVersion"] = $converted_object.BiosVersion
+
+            $hash_table = @{}
+            $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            foreach($key in $hash_table.Keys)
+            {
+                if($key -in 'Status', 'HostName', 'PowerState', 'Model', 'Manufacturer', 'SystemType','PartNumber', 'SerialNumber', 'AssetTag', 'ServiceTag', 'UUID', 'SKU','BiosVersion', 'ProcessorSummary', 'MemorySummary', 'TrustedModules')
+                {
+                    $ht_system_info[$key] = $hash_table[$key]
+                }
+            }
+
+            if($hash_table.keys -contains "Oem"){
+                $ht_system_info["Oem"] = @{}
+                $oem_content = $converted_object.Oem.Lenovo
+                $tmp_table = @{}
+                $oem_content.psobject.properties | Foreach { $tmp_table[$_.Name] = $_.Value }
+                $lenovo_oem = @{}
+                foreach($key in $tmp_table.Keys){
+                    if($key -in 'FrontPanelUSB', 'SystemStatus', 'NumberOfReboots', 'TotalPowerOnHours')
+                    {
+                        $lenovo_oem[$key] = $tmp_table[$key]
+                    }
+                }
+                $ht_system_info["Oem"]["Lenove"]=$lenovo_oem
+            }
+
 
             # Get System EtherNetInterfaces resources
             $nics_url = "https://$ip" + $converted_object.EthernetInterfaces."@odata.id"
@@ -138,7 +164,7 @@ function get_system_inventory
             $ht_system_info["EtherNetInterfaces"] = $list_ethernetinterface
            
             # Output result
-            ConvertOutputHashTableToObject $ht_system_info
+            ConvertOutputHashTableToObject $ht_system_info | ConvertTo-Json -Depth 6
         }
     }
     catch

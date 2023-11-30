@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get BMC information
 #
@@ -79,12 +79,12 @@ function get_bmc_inventory
     try
     {
         $session_key = ""
-        $session_location = ""
+        # $session_location = ""
 
         # Create session
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
-        $session_location = $session.Location
+        # $session_location = $session.Location
 
         # Build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key
@@ -113,25 +113,28 @@ function get_bmc_inventory
             # Get url string
             $network_protocol_url  ="https://$ip" + $manager_converted_object.NetworkProtocol."@odata.id"
             $serial_url = "https://$ip" + $manager_converted_object.SerialInterfaces."@odata.id"
+            $ethernet_url = "https://$ip" + $manager_converted_object.EthernetInterfaces."@odata.id"
             
             # Get info from manager resource instance
             $ht_bmc_info["FirmwareVersion"] = $manager_converted_object.FirmwareVersion
             $ht_bmc_info["Model"] = $manager_converted_object.Model
             $ht_bmc_info["DateTime"] = $manager_converted_object.DateTime
+            $ht_bmc_info["DateTimeLocalOffset"] = $manager_converted_object.DateTimeLocalOffset
 
             # Get info from network_protocol resource instance
             $network_response = Invoke-WebRequest -Uri $network_protocol_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $network_converted_object = $network_response.Content | ConvertFrom-Json
-            $ht_bmc_info["FQDN"] = $network_converted_object.FQDN
-            $ht_bmc_info["HostName"] = $network_converted_object.HostName
-            $ht_bmc_info["HTTP"] = $network_converted_object.HTTP.Port
-            $ht_bmc_info["HTTPS"] = $network_converted_object.HTTPS.Port
-            $ht_bmc_info["SSH"] = $network_converted_object.SSH.Port
-            $ht_bmc_info["SNMP"] = $network_converted_object.SNMP.Port
-            $ht_bmc_info["KVMIP"] = $network_converted_object.KVMIP.Port
-            $ht_bmc_info["IPMI"] = $network_converted_object.IPMI.Port
-            $ht_bmc_info["SSDP"] = $network_converted_object.SSDP.Port
-            $ht_bmc_info["VirtualMedia"] = $network_converted_object.VirtualMedia.Port
+
+            $ht_tmp = @{}
+            $network_converted_object.psobject. properties | Foreach{ $ht_tmp[$_.Name] = $_.Value }
+            foreach($key in $ht_tmp.Keys)
+            {
+                if($key -notin 'FQDN', 'HostName', 'HTTP', 'HTTPS', 'SSH', 'SNMP', 'KVMIP','IPMI', 'SSDP', 'VirtualMedia')
+                {
+                    continue
+                }
+                $ht_bmc_info[$key] = $ht_tmp[$key]
+            }
             
             # Get info from serial resource instance
             $serial_response = Invoke-WebRequest -Uri $serial_url -Headers $JsonHeader -Method Get -UseBasicParsing
@@ -147,18 +150,53 @@ function get_bmc_inventory
                 $serial_x_url = "https://$ip" + $serial_converted_object.Members[$num]."@odata.id"
                 $serial__x_response = Invoke-WebRequest -Uri $serial_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
                 $serial_x_converted_object = $serial__x_response.Content | ConvertFrom-Json
-                $ht_serial["Id"] = $serial_x_converted_object.Id
-                $ht_serial["BitRate"] = $serial_x_converted_object.BitRate
-                $ht_serial["Parity"] = $serial_x_converted_object.Parity
-                $ht_serial["StopBits"] = $serial_x_converted_object.StopBits
-                $ht_serial["FlowControl"] = $serial_x_converted_object.FlowControl
-                $object = [pscustomobject] $ht_serial
-                $list_serial += $object.PSObject.ToString()
+
+                $ht_tmp = @{}
+                $serial_x_converted_object.psobject. properties | Foreach{ $ht_tmp[$_.Name] = $_.Value }
+                $ht_serial["Id"] = $ht_tmp["Id"]
+                $ht_serial["BitRate"] = $ht_tmp["BitRate"]
+                $ht_serial["Parity"] = $ht_tmp["Parity"]
+                $ht_serial["StopBits"] = $ht_tmp["StopBits"]
+                $ht_serial["FlowControl"] = $ht_tmp["FlowControl"]
+
+                $list_serial += $ht_serial
             }
 
             # Output result
             $ht_bmc_info["serial_info"] = $list_serial
-            ConvertOutputHashTableToObject $ht_bmc_info
+
+            # Get info from ethernet resource instance
+            $ethernet_response = Invoke-WebRequest -Uri $ethernet_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $ethernet_converted_object = $ethernet_response.Content | ConvertFrom-Json
+            $ethernet_count = $ethernet_converted_object."Members@odata.count"
+            $list_ethernet = @()
+            
+            # Loop all sub_ethernet resource instance in ethernet resource
+            for($num =0;$num -lt $ethernet_count;$num++)
+            {
+                # Get sub ethernet resource
+                $ht_ethernet = @{}
+                $ethernet_x_url = "https://$ip" + $ethernet_converted_object.Members[$num]."@odata.id"
+                $ethernet__x_response = Invoke-WebRequest -Uri $ethernet_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $ethernet_x_converted_object = $ethernet__x_response.Content | ConvertFrom-Json
+
+                $ht_tmp = @{}
+                $ethernet_x_converted_object.psobject. properties | Foreach{ $ht_tmp[$_.Name] = $_.Value }
+                foreach($key in $ht_tmp.Keys)
+                {
+                    if($key -in 'Id', 'Name', 'MACAddress', 'PermanentMACAddress', 'MTUSize', 'FQDN','AutoNeg', 'Status', 'InterfaceEnabled', 'SpeedMbps', 'NameServers', 'StaticNameServers','DHCPv4', 'DHCPv6', 'IPv4Addresses', 'IPv4StaticAddresses', 'IPv6Addresses', 'IPv6StaticAddresses')
+                    {
+                        $ht_ethernet[$key] = $ht_tmp[$key]
+                    }
+                }
+
+                $list_ethernet += $ht_ethernet
+            }
+
+            # Output result
+            $ht_bmc_info["ethernet_info"] = $list_ethernet
+
+            ConvertOutputHashTableToObject $ht_bmc_info | ConvertTo-Json
         }
         
     }

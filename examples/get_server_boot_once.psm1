@@ -102,6 +102,8 @@ function get_server_boot_once
             $converted_object = $response.Content | ConvertFrom-Json
 
             # Get bios boot once information
+            $boot_once_dict["BootSourceOverrideEnabled"] = $converted_object."Boot"."BootSourceOverrideEnabled"
+            $boot_once_dict["BootSourceOverrideMode"] = $converted_object."Boot"."BootSourceOverrideMode"
             $boot_once_dict["BootSourceOverrideTarget"] = $converted_object."Boot"."BootSourceOverrideTarget"
             ConvertOutputHashTableToObject $boot_once_dict
         }

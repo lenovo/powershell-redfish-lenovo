@@ -117,10 +117,12 @@ function get_bios_attribute_metadata
 
         $Registry_url_string = "https://$ip" + $converted_object."Location"."Uri"
         $response = Invoke-WebRequest -Uri $Registry_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
-        $response.Content | Out-File "bios_attribute_metadata.json"
+        # $response.Content | Out-File "bios_attribute_metadata.json"
+        $response.Content | Out-File "$Registry.json"
 
         Write-Host
-        [String]::Format("- PASS, statuscode {0} returned to successfully get bios attribute metadata at {1}",$response.StatusCode, "$PSScriptRoot\bios_attribute_metadata.json")
+        # [String]::Format("- PASS, statuscode {0} returned to successfully get bios attribute metadata at {1}",$response.StatusCode, "$PSScriptRoot\bios_attribute_metadata.json")
+        [String]::Format("- PASS, statuscode {0} returned to successfully get bios attribute metadata at {1}",$response.StatusCode, "$PSScriptRoot\$Registry.json")
         return $True   
         
    }

@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get event subscriptions
 #
@@ -88,6 +88,8 @@ function get_event_subscriptions
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 
         $converted_object =$response.Content | ConvertFrom-Json
 
+        $ht_subscription_info = @{}
+
         #Get event url resource
         $event_url = "https://$ip" + $converted_object.EventService."@odata.id"
         $response = Invoke-WebRequest -Uri $event_url -Headers $JsonHeader -Method Get -UseBasicParsing 
@@ -97,25 +99,40 @@ function get_event_subscriptions
         $subscriptions_url = "https://$ip" + $converted_object.Subscriptions."@odata.id"
         $response = Invoke-WebRequest -Uri $subscriptions_url -Headers $JsonHeader -Method Get -UseBasicParsing 
         $converted_object =$response.Content | ConvertFrom-Json
+
+        $ht_tmp = @{}
+        $converted_object.psobject. properties | Foreach{ $ht_tmp[$_.Name] = $_.Value }
+        foreach($key in $ht_tmp.Keys)
+        {
+            if($key.StartsWith("@") -or $key -eq "Members@odata.navigationLink" -or $key -eq "Members")
+            {
+                continue
+            }
+            $ht_subscription_info[$key] = $ht_tmp[$key]
+        }
+        $list_ht_subscription = @{}
         foreach($item in $converted_object.Members)
         {
+            $ht_subscription_members = @{}
             $subscription_url = "https://$ip" + $item."@odata.id"
             $response = Invoke-WebRequest -Uri $subscription_url -Headers $JsonHeader -Method Get -UseBasicParsing 
             $converted_object =$response.Content | ConvertFrom-Json
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-            $ht_subscription_info = @{}
             foreach($key in $hash_table.Keys)
             {
-                if($key.StartsWith("@") -or $key -eq "Members@odata.navigationLink" -or $key -eq "Members")
+                if($key.StartsWith("@"))
                 {
                     continue
                 }
-                $ht_subscription_info[$key] = $hash_table[$key]
+                $ht_subscription_members[$key] = $hash_table[$key]
             }
-            # Output result
-            ConvertOutputHashTableToObject $ht_subscription_info
+            $list_ht_subscription += $ht_subscription_members
         }
+        # Output result
+        $ht_subscription_info["Members"] = $list_ht_subscription
+
+        ConvertOutputHashTableToObject $ht_subscription_info | ConvertTo-Json -Depth 4
 
         return $True
     }
