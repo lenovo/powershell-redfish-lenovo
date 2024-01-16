@@ -107,7 +107,7 @@ function get_pci_inventory
                $tmp_chassis_url_string = "https://$ip" + $i."@odata.id"
                $chassis_url_collection += $tmp_chassis_url_string
         }
-
+        $pci_details = @()
         # Loop all System resource instance in $chassis_url_collection
         foreach($chassis_url_string in $chassis_url_collection)
         {
@@ -137,21 +137,73 @@ function get_pci_inventory
                 $pci_device_x_url ="https://$ip" +  $converted_pci_object.Members[$i]."@odata.id"
                 $response_pci_x_device = Invoke-WebRequest -Uri $pci_device_x_url -Headers $JsonHeader -Method Get -UseBasicParsing 
                 $converted_pci_x_object = $response_pci_x_device.Content | ConvertFrom-Json
-                $ht_pcidevice["PCI_Device_ID"] = $converted_pci_x_object.Id
-                $ht_pcidevice["Name"] = $converted_pci_x_object.Name
-                $ht_pcidevice["Status"] = $converted_pci_x_object.Status
-                $ht_pcidevice["Manufacturer"] = $converted_pci_x_object.Manufacturer
-                $ht_pcidevice["Model"] = $converted_pci_x_object.Model
-                $ht_pcidevice["DeviceType"] = $converted_pci_x_object.DeviceType
-                $ht_pcidevice["SerialNumber"] = $converted_pci_x_object.SerialNumber
-                $ht_pcidevice["PartNumber"] = $converted_pci_x_object.PartNumber
-                $ht_pcidevice["FirmwareVersion"] = $converted_pci_x_object.FirmwareVersion
-                $ht_pcidevice["SKU"] = $converted_pci_x_object.SKU
+                $response_members_url = @{}
+                $converted_pci_x_object.psobject.properties | Foreach { $response_members_url[$_.Name] = $_.Value }
+                
+                $response_efunctions_url = @{}
+                $response_members_url.PCIeFunctions.psobject.properties | Foreach { $response_efunctions_url[$_.Name] = $_.Value }
+                
+                $response_links_url = @{}
+                $response_members_url.Links.psobject.properties | Foreach { $response_links_url[$_.Name] = $_.Value }
+                $response_member_id = @{}
+                $response_id = $response_efunctions_url['@odata.id']
+                $response_id.psobject.properties | Foreach { $response_member_id[$_.Name] = $_.Value }
+                $properties = @('Id', 'Name', 'Description', 'Status', 'Manufacturer', 'Model', 'DeviceType', 'SerialNumber', 'PartNumber', 'FirmwareVersion', 'SKU')
+                foreach ($property in $properties) 
+                {
+                    if($response_members_url.Keys -contains $property)
+                    {
+                        $ht_pcidevice[$property] = $converted_pci_x_object.$property
+                    }
+                }
                 # Retrun result
-                ConvertOutputHashTableToObject $ht_pcidevice | ConvertTo-Json
-                Write-Host " "
+                $ht_pcidevice['PCIeFunctions'] = @()
+                $members = @()
+                
+                if($response_members_url.Keys -contains 'PCIeFunctions' -and $response_efunctions_url.Keys -contains '@odata.id' -and $response_member_id -ne $null)
+                {
+                    $response_pciefunc ="https://$ip" +  $converted_pci_x_object.PCIeFunctions."@odata.id"
+                    $response_pci_efunc = Invoke-WebRequest -Uri $response_pciefunc -Headers $JsonHeader -Method Get -UseBasicParsing 
+                    $converted_pciobject = $response_pci_efunc.Content | ConvertFrom-Json
+                    $hash_table = @{}
+                    $converted_pciobject.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    foreach($member in $hash_table.Members)
+                    {
+                        $members+=$member
+                    }
+                }else{
+                    if($response_members_url.Keys -contains 'Links' -and $response_links_url.Keys -contains 'PCIeFunctions')
+                    {
+                        $response_members = $response_members_url['Links']['PCIeFunctions']
+                        foreach($pciefunc_entry in $response_members)
+                        {
+                            $members += $pciefunc_entry
+                        }
+                    }
+                }
+                foreach($member_url in $members)
+                {
+                    $pciefunc = @{}
+                    $response_pciefunc_url = "https://$ip" +  $member_url."@odata.id"
+                    $response_pciefunc_member = Invoke-WebRequest -Uri $response_pciefunc_url -Headers $JsonHeader -Method Get -UseBasicParsing 
+                    $converted_pciobject = $response_pciefunc_member.Content | ConvertFrom-Json
+                    $hash_table = @{}
+                    $converted_pciobject.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    $properties = @('Id', 'VendorId', 'DeviceId', 'SubsystemId', 'SubsystemVendorId', 'DeviceClass', 'FunctionId', 'FunctionType')
+                    foreach($property in $properties)
+                    {
+                        if($hash_table.Keys -contains $property)
+                        {
+                            $pciefunc[$property] = $hash_table.$property
+                        }
+                    }
+                    $ht_pcidevice['PCIeFunctions'] += $pciefunc
+                }
+                $pci_details += $ht_pcidevice
             }
         }  
+        $pci_details | ConvertTo-Json -Depth 10
+        Write-Host " "
     }
     catch
     {

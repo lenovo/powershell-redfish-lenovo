@@ -112,7 +112,8 @@ function get_chassis_inventory
 
             # Delete content with only url property
             foreach($property in ("Links", "@odata.etag", "@odata.id", "@odata.type", "LogServices",
-            "Memory", "NetworkAdapters", "PCIeDevices", "PCIepythonSlots", "Power", "Thermal"))
+            "Memory", "NetworkAdapters", "PCIeDevices", "PCIepythonSlots", "Power", "Thermal",
+            "Controls", "EnvironmentMetrics", "PowerSubsystem", "Sensors", "ThermalSubsystem"))
             {
                 if($chassis_inventory.Keys -contains $property) 
                 {
