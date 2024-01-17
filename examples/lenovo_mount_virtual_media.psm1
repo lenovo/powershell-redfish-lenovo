@@ -190,15 +190,20 @@ function lenovo_mount_virtual_media
             $response = Invoke-WebRequest -Uri $uri_address_system -Credential $bmc_credential -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
             $uri_virtual_media ="https://$ip" + $converted_object."VirtualMedia"."@odata.id"
-            if($converted_object."VirtualMedia"."@odata.id" -eq $null)
-            {
-                $parts = $system_url_string -split "/"
-                $managers_url_string = "/redfish/v1/Managers/" + $parts[-1] + "/VirtualMedia"
-                $uri_virtual_media ="https://$ip" + $managers_url_string
-            }
-
             $uri_remote_map ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteMap"."@odata.id"
             $uri_remote_control ="https://$ip" + $converted_object."Oem"."Lenovo"."RemoteControl"."@odata.id"
+            if($null -eq $converted_object."VirtualMedia"."@odata.id" -or 
+            $null -eq $converted_object."Oem"."Lenovo"."RemoteControl"."@odata.id" -or 
+            $null -eq $converted_object."Oem"."Lenovo"."RemoteMap"."@odata.id")
+            {
+                $parts = $system_url_string -split "/"
+                $managers_url_string = "https://$ip" + "/redfish/v1/Managers/" + $parts[-1]
+                $response = Invoke-WebRequest -Uri $managers_url_string -Credential $bmc_credential -Method Get -UseBasicParsing
+                $converted_object_manager = $response.Content | ConvertFrom-Json
+                $uri_virtual_media ="https://$ip" + $converted_object_manager."VirtualMedia"."@odata.id"
+                $uri_remote_map ="https://$ip" + $converted_object_manager."Oem"."Lenovo"."RemoteMap"."@odata.id"
+                $uri_remote_control ="https://$ip" + $converted_object_manager."Oem"."Lenovo"."RemoteControl"."@odata.id"
+            }
 
             # Get the virtual media response resource
             $response = Invoke-WebRequest -Uri $uri_virtual_media -Credential $bmc_credential -Method Get -UseBasicParsing
@@ -368,12 +373,6 @@ function lenovo_mount_virtual_media
                     [String]::Format("For remote mounting of RDOC images, supported protocol list: {0}.",$allow_protocols)
                     return $False
                 }
-
-                if($fsprotocol -eq "samba")
-                {
-                    $fsprotocol = "smb"
-                }
-
                 $body = @{
                     "sourceURL" = $source_url;
                     "Username" = $fsusername;
@@ -383,6 +382,12 @@ function lenovo_mount_virtual_media
                     "Domain" = $domain;
                     "Option" = $options
                 }
+
+                if($fsprotocol -eq "samba")
+                {
+                    $body["Type"] = (Get-Culture).TextInfo.ToTitleCase($fsprotocol.ToLower());
+                }
+                
                 $json_body = $body | convertto-json
 
                 $response = Invoke-WebRequest -Uri $upload_url -Credential $bmc_credential -Method Post -Body $json_body -ContentType 'application/json'
