@@ -93,7 +93,7 @@ function get_bmc_inventory
         # Get the system url collection
         $system_url_collection = @()
         $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id
-
+        $bmc_details = @()
         # Loop all System resource instance in $system_url_collection
         foreach($system_url_string in $system_url_collection)
         {
@@ -115,29 +115,35 @@ function get_bmc_inventory
             $serial_url = "https://$ip" + $manager_converted_object.SerialInterfaces."@odata.id"
             
             # Get info from manager resource instance
-            $ht_bmc_info["FirmwareVersion"] = $manager_converted_object.FirmwareVersion
-            $ht_bmc_info["Model"] = $manager_converted_object.Model
-            $ht_bmc_info["DateTime"] = $manager_converted_object.DateTime
+            $hash_table= @{}
+            $manager_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            $BMC_Property = @('FirmwareVersion', 'Model', 'DateTime', 'DateTimeLocalOffset')
+            foreach ($property in $BMC_Property) 
+            {
+                if($hash_table.keys -contains $property)
+                {
+                    $ht_bmc_info[$property] = $hash_table.$property
+                }
+            }
 
             # Get info from network_protocol resource instance
             $network_response = Invoke-WebRequest -Uri $network_protocol_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $network_converted_object = $network_response.Content | ConvertFrom-Json
-            $ht_bmc_info["FQDN"] = $network_converted_object.FQDN
-            $ht_bmc_info["HostName"] = $network_converted_object.HostName
-            $ht_bmc_info["HTTP"] = $network_converted_object.HTTP.Port
-            $ht_bmc_info["HTTPS"] = $network_converted_object.HTTPS.Port
-            $ht_bmc_info["SSH"] = $network_converted_object.SSH.Port
-            $ht_bmc_info["SNMP"] = $network_converted_object.SNMP.Port
-            $ht_bmc_info["KVMIP"] = $network_converted_object.KVMIP.Port
-            $ht_bmc_info["IPMI"] = $network_converted_object.IPMI.Port
-            $ht_bmc_info["SSDP"] = $network_converted_object.SSDP.Port
-            $ht_bmc_info["VirtualMedia"] = $network_converted_object.VirtualMedia.Port
+            $hash_table= @{}
+            $network_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            $NetProtocol_Property = @('FQDN', 'HostName', 'HTTP', 'HTTPS', 'SSH', 'SNMP', 'KVMIP', 'IPMI', 'SSDP', 'VirtualMedia')
+            foreach ($netproperty in $NetProtocol_Property) 
+            {
+                if($hash_table.keys -contains $netproperty)
+                {
+                    $ht_bmc_info[$netproperty] = $hash_table.$netproperty
+                }
+            }
             
             # Get info from serial resource instance
             $serial_response = Invoke-WebRequest -Uri $serial_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $serial_converted_object = $serial_response.Content | ConvertFrom-Json
             $serial_count = $serial_converted_object."Members@odata.count"
-            $list_serial = @()
             
             # Loop all sub_serial resource instance in serial resource
             for($num =0;$num -lt $serial_count;$num++)
@@ -147,18 +153,53 @@ function get_bmc_inventory
                 $serial_x_url = "https://$ip" + $serial_converted_object.Members[$num]."@odata.id"
                 $serial__x_response = Invoke-WebRequest -Uri $serial_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
                 $serial_x_converted_object = $serial__x_response.Content | ConvertFrom-Json
-                $ht_serial["Id"] = $serial_x_converted_object.Id
-                $ht_serial["BitRate"] = $serial_x_converted_object.BitRate
-                $ht_serial["Parity"] = $serial_x_converted_object.Parity
-                $ht_serial["StopBits"] = $serial_x_converted_object.StopBits
-                $ht_serial["FlowControl"] = $serial_x_converted_object.FlowControl
-                $object = [pscustomobject] $ht_serial
-                $list_serial += $object.PSObject.ToString()
+                $hash_table= @{}
+                $serial_x_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                $Serial_Property = @('Id', 'BitRate', 'Parity', 'StopBits', 'FlowControl')
+                foreach ($property3 in $Serial_Property) 
+                {
+                    if($hash_table.keys -contains $property3)
+                    {
+                        $ht_serial[$property3] = $hash_table.$property3
+                    }
+                }
+                $ht_bmc_info['serial_info'] += $ht_serial
+            }
+            $hash_table= @{}
+            $manager_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+            if ($hash_table.Keys -contains "EthernetInterfaces")
+            {
+                $ethernet_url = "https://$ip" + $hash_table.EthernetInterfaces."@odata.id"
+                $serial_response = Invoke-WebRequest -Uri $ethernet_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $serial_converted_object = $serial_response.Content | ConvertFrom-Json
+                $serial_count = 0
+                $serial_count = $serial_converted_object."Members@odata.count"
+                $ethernet_info_list = @()
+                for ($x = 0; $x -lt $serial_count; $x++) 
+                {
+                    $ethernet_info = @{}
+                    $ethernet_x_url = $serial_converted_object.Members[$x]."@odata.id"
+                    $response_ethernet_x_url = "https://$ip" + $ethernet_x_url
+                    $serial_response = Invoke-WebRequest -Uri $response_ethernet_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $response_ethernet_x_data = $serial_response.Content | ConvertFrom-Json
+                    $hash_table= @{}
+                    $response_ethernet_x_data.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    $properties = @('Id', 'Name', 'MACAddress', 'PermanentMACAddress', 'MTUSize', 'FQDN', 'AutoNeg', 'Status', 'InterfaceEnabled', 'SpeedMbps', 'NameServers', 'StaticNameServers', 'DHCPv4', 'DHCPv6', 'IPv4Addresses', 'IPv4StaticAddresses', 'IPv6Addresses', 'IPv6StaticAddresses')
+                    foreach ($property in $properties) 
+                    {
+                        if($hash_table.Keys -contains $property)
+                        {
+                            $ethernet_info[$property] = $hash_table.$property
+                        }
+                    }
+                    $ethernet_info_list += $ethernet_info
+                }
+                $ht_bmc_info['ethernet_info'] +=  $ethernet_info_list
             }
 
             # Output result
-            $ht_bmc_info["serial_info"] = $list_serial
-            ConvertOutputHashTableToObject $ht_bmc_info
+            $bmc_details = $ht_bmc_info
+            $bmc_details | ConvertTo-Json -Depth 10
         }
         
     }

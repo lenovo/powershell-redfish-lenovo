@@ -145,7 +145,7 @@ function lenovo_bmc_license_getinfo
                     $Members_response = Invoke-WebRequest -Uri $Members_url -Headers $JsonHeader -Method Get -UseBasicParsing
                     $converted_object = $Members_response.Content | ConvertFrom-Json
                     $license_details = @{}
-                    foreach($property in ('Id', 'Name', 'Expires', 'Status', 'IdTypes', 'UseCount', 'DescTypeCode', 'Identifier', 'Description'))
+                    foreach($property in ('Id', 'Name', 'Expires', 'Status', 'IdTypes', 'UseCount', 'DescTypeCode', 'Identifier', 'Description', 'RemainingUseCount', 'Manufacturer', 'Removable', 'EntitlementId'))
                     {
                         if ($converted_object.Keys -contains $property.Keys) 
                         {
