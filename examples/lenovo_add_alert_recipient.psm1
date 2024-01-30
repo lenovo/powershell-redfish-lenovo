@@ -205,7 +205,7 @@ function lenovo_add_alert_recipient
             }
             else 
             {
-                $setting_dict["RecipientSettings"]["EnabledAlerts"]["CriticalEvents"]["AcceptedEvents"] = $CriticalEvents
+                $setting_dict["RecipientSettings"]["EnabledAlerts"]["CriticalEvents"]["AcceptedEvents"] = @($CriticalEvents)
             }
         }
 
@@ -220,7 +220,7 @@ function lenovo_add_alert_recipient
             }
             else 
             {
-                $setting_dict["RecipientSettings"]["EnabxledAlerts"]["WarningEvents"]["AcceptedEvents"] = $WarningEvents
+                $setting_dict["RecipientSettings"]["EnabledAlerts"]["WarningEvents"]["AcceptedEvents"] = @($WarningEvents)
             }
         }
 
@@ -236,7 +236,7 @@ function lenovo_add_alert_recipient
             }
             else 
             {
-                $setting_dict["RecipientSettings"]["EnabledAlerts"]["SystemEvents"]["AcceptedEvents"] = $SystemEvents
+                $setting_dict["RecipientSettings"]["EnabledAlerts"]["SystemEvents"]["AcceptedEvents"] = @($SystemEvents)
             }
         }
         
@@ -267,6 +267,19 @@ function lenovo_add_alert_recipient
             }
         }
         # POST setting info body to add one new recipient
+        trap 
+        {
+            if($SystemEvents -contains 'all' -or $SystemEvents -contains 'All')
+            {
+                $all_system_events[-1] = 'AllOtherAuditEvents'
+                $setting_dict["RecipientSettings"]["EnabledAlerts"]["SystemEvents"]["AcceptedEvents"] = $all_system_events
+            }
+            
+            $JsonBody = $setting_dict | ConvertTo-Json -Depth 10
+            $response = Invoke-WebRequest -Uri $response_recipients_url -Method Post -Headers $JsonHeader -Body $JsonBody
+            [String]::Format("Add alert recipientsuccessfully, id is {0}.",$setting_dict['Id'])
+            return $True
+        }
         $JsonHeader = @{ "X-Auth-Token" = $session_key; "Content-Type"= "application/json"}
         $JsonBody = $setting_dict | ConvertTo-Json -Depth 10
         $response = Invoke-WebRequest -Uri $response_recipients_url -Method Post -Headers $JsonHeader -Body $JsonBody
