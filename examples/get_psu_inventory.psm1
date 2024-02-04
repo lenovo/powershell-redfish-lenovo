@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get the PSU information
 #
@@ -106,6 +106,59 @@ function get_psu_inventory
             $chassis_url = "https://$ip" + $converted_object.Links.Chassis."@odata.id"  
             $chassis_response =   Invoke-WebRequest -Uri $chassis_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $chassis_converted_object = $chassis_response.Content | ConvertFrom-Json
+
+            if ($chassis_converted_object.psobject.Properties.name -match "PowerSubsystem"){
+                # Get powersubsystem resource 
+                $powersubsystem_url = "https://$ip" + $chassis_converted_object.PowerSubsystem."@odata.id"
+                $powersubsystem_response =   Invoke-WebRequest -Uri $powersubsystem_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $powersubsystem_converted_object = $powersubsystem_response.Content | ConvertFrom-Json
+                
+                # Get powersubsystem supply resource 
+                $powersubsystemsupply_url = "https://$ip" + $powersubsystem_converted_object.PowerSupplies."@odata.id"
+                $powersubsystemsupply_response =   Invoke-WebRequest -Uri $powersubsystemsupply_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $powersubsystemsupply_converted_object = $powersubsystemsupply_response.Content | ConvertFrom-Json
+
+                $hash_table = @{}
+                $powersubsystemsupply_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                #get powersubsystem supply info
+                foreach ($i in $hash_table.Members)
+                {
+                    $powersubsystemsupply_x_url = "https://$ip" + $i."@odata.id"
+                    $powersubsystemsupply__x_response = Invoke-WebRequest -Uri $powersubsystemsupply_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $powersubsystemsupply_x_converted_object = $powersubsystemsupply__x_response.Content | ConvertFrom-Json
+
+                    $hash_table = @{}
+                    $powersubsystemsupply_x_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    $ht_powersubsystemsupply_info = @{}
+                    foreach($key in $hash_table.Keys)
+                    {
+                        if($key -notin "@odata.id", "@odata.context", "@odata.type", "@odata.etag")
+                        {
+                            $ht_powersubsystemsupply_info[$key] = $hash_table[$key]
+                        }
+                    }
+
+                    $metrics_url = "https://$ip" + $powersubsystemsupply_x_converted_object.Metrics."@odata.id"
+                    $metrics_response = Invoke-WebRequest -Uri $metrics_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $metrics_converted_object = $metrics_response.Content | ConvertFrom-Json
+
+                    $hash_tmp = @{}
+                    $metrics_converted_object.psobject.properties | Foreach { $hash_tmp[$_.Name] = $_.Value }
+                    $ht_metrics_info = @{}
+                    foreach($key in $hash_tmp.Keys)
+                    {
+                        if($key -notin "@odata.id", "@odata.context", "@odata.type", "@odata.etag")
+                        {
+                            $ht_metrics_info[$key] = $hash_tmp[$key]
+                        }
+                    }
+                    $ht_powersubsystemsupply_info["Metrics"] = $ht_metrics_info
+
+                    # Output result
+                    ConvertOutputHashTableToObject $ht_powersubsystemsupply_info                
+                }
+            }
+            
 
             # Get power resource 
             $power_url = "https://$ip" + $chassis_converted_object.Power."@odata.id"
