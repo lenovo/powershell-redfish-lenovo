@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get the CPU information
 #
@@ -47,6 +47,7 @@ function get_cpu_inventory
         [Parameter(Mandatory=$False)]
         [string]$username="",
         [Parameter(Mandatory=$False)]
+        # [string]$password="",
         [string]$password="",
         [Parameter(Mandatory=$False)]
         [string]$system_id="None",
@@ -79,12 +80,12 @@ function get_cpu_inventory
     try
     {
         $session_key = ""
-        $session_location = ""
+        # $session_location = ""
 
         # Create session
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
-        $session_location = $session.Location
+        # $session_location = $session.Location
 
         # Build headers with sesison key for authentication
         $JsonHeader = @{ "X-Auth-Token" = $session_key
@@ -118,17 +119,17 @@ function get_cpu_inventory
                 $cpu_response =   Invoke-WebRequest -Uri $cpu_url -Headers $JsonHeader -Method Get -UseBasicParsing
                 $cpu_converted_object = $cpu_response.Content | ConvertFrom-Json
                 $ht_cpu_info = @{}
-                $ht_cpu_info["Name"] = $cpu_converted_object.Name
-                $ht_cpu_info["TotalThreads"] = $cpu_converted_object.TotalThreads
-                $ht_cpu_info["InstructionSet"] = $cpu_converted_object.InstructionSet
-                $ht_cpu_info["State"] = $cpu_converted_object.Status.State
-                $ht_cpu_info["Health"] = $cpu_converted_object.Status.Health
-                $ht_cpu_info["ProcessorType"] = $cpu_converted_object.ProcessorType
-                $ht_cpu_info["TotalCores"] = $cpu_converted_object.TotalCores
-                $ht_cpu_info["Manufacturer"] = $cpu_converted_object.Manufacturer
-                $ht_cpu_info["MaxSpeedMHz"] = $cpu_converted_object.MaxSpeedMHz
-                $ht_cpu_info["Model"] = $cpu_converted_object.Model
-                $ht_cpu_info["Socket"] = $cpu_converted_object.Socket
+
+                $ht_tmp = @{}
+                $cpu_converted_object.psobject. properties | Foreach{ $ht_tmp[$_.Name] = $_.Value }
+                foreach($key in $ht_tmp.Keys)
+                {
+                    if($key -in 'Id', 'Name', 'TotalThreads', 'InstructionSet', 'Status', 'ProcessorType', 'ProcessorId', 'ProcessorMemory', 
+                    'ProcessorArchitecture', 'TotalCores', 'TotalEnabledCores', 'Manufacturer', 'MaxSpeedMHz', 'Model', 'Socket', 'TDPWatts')
+                    {
+                        $ht_cpu_info[$key] = $ht_tmp[$key]
+                    }
+                }
                 
                 # Output result
                 ConvertOutputHashTableToObject $ht_cpu_info
