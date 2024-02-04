@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get the System information
 #
@@ -98,43 +98,48 @@ function get_system_inventory
         foreach($system_url_string in $system_url_collection)
         {
             # Hash table for system info
-            $system = @{}
+            $ht_system_info = @{}
 
             # Get system resource
             $url_address_system = "https://$ip" + $system_url_string
             $response = Invoke-WebRequest -Uri $url_address_system -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
+            # $ht_system_info["HostName"] = $converted_object.HostName
+            # $ht_system_info["Model"] = $converted_object.Model
+            # $ht_system_info["SerialNumber"] = $converted_object.SerialNumber
+            # $ht_system_info["AssetTag"] = $converted_object.AssetTag
+            # $ht_system_info["UUID"] = $converted_object.UUID
+            # $ht_system_info["ProcesorsModel"] = $converted_object.ProcessorSummary.Model
+            # $ht_system_info["ProcesorsCount"] = $converted_object.ProcessorSummary.Count
+            # $ht_system_info["TotalSystemMemoryGiB"] = $converted_object.MemorySummary.TotalSystemMemoryGiB
+            # $ht_system_info["BiosVersion"] = $converted_object.BiosVersion
+
             $hash_table = @{}
             $converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-            $system_properties = @('Status', 'HostName', 'PowerState', 'Model', 'Manufacturer', 'SystemType',
-                      'PartNumber', 'SerialNumber', 'AssetTag', 'ServiceTag', 'UUID', 'SKU',
-                      'BiosVersion', 'ProcessorSummary', 'MemorySummary', 'TrustedModules')
-            $lenovo_oem_properties = @('FrontPanelUSB', 'SystemStatus', 'NumberOfReboots', 'TotalPowerOnHours')
-            foreach ($system_property in $system_properties)
+            foreach($key in $hash_table.Keys)
             {
-                if($hash_table.Keys -contains $system_property)
+                if($key -in 'Status', 'HostName', 'PowerState', 'Model', 'Manufacturer', 'SystemType','PartNumber', 'SerialNumber', 'AssetTag', 'ServiceTag', 'UUID', 'SKU','BiosVersion', 'ProcessorSummary', 'MemorySummary', 'TrustedModules')
                 {
-                    $system[$system_property] = $hash_table.$system_property
+                    $ht_system_info[$key] = $hash_table[$key]
                 }
             }
-            
-            $hash_table_oem = @{}
-            $hash_table.Oem.psobject.properties | Foreach { $hash_table_oem[$_.Name] = $_.Value }
-            
-            $hash_table_lenovo = @{}
-            $hash_table_oem.Lenovo.psobject.properties | Foreach { $hash_table_lenovo[$_.Name] = $_.Value }
 
-            if ($hash_table.Keys -contains 'Oem' -and $hash_table_oem.Keys -contains 'Lenovo') 
-            {
-                $system['Oem'] = @{'Lenovo' = @{}}
-                foreach ($oem_property in $lenovo_oem_properties)
-                {
-                    if($hash_table_lenovo.Keys -contains $oem_property)
+            if($hash_table.keys -contains "Oem"){
+                $ht_system_info["Oem"] = @{}
+                $oem_content = $converted_object.Oem.Lenovo
+                $tmp_table = @{}
+                $oem_content.psobject.properties | Foreach { $tmp_table[$_.Name] = $_.Value }
+                $lenovo_oem = @{}
+                foreach($key in $tmp_table.Keys){
+                    if($key -in 'FrontPanelUSB', 'SystemStatus', 'NumberOfReboots', 'TotalPowerOnHours')
                     {
-                        $system['Oem']['Lenovo'][$oem_property] = $hash_table_lenovo.$oem_property
+                        $lenovo_oem[$key] = $tmp_table[$key]
                     }
                 }
+                $ht_system_info["Oem"]["Lenove"]=$lenovo_oem
             }
+
+
             # Get System EtherNetInterfaces resources
             $nics_url = "https://$ip" + $converted_object.EthernetInterfaces."@odata.id"
             $nics_response = Invoke-WebRequest -Uri $nics_url -Headers $JsonHeader -Method Get -UseBasicParsing
@@ -156,10 +161,10 @@ function get_system_inventory
                 $object = [pscustomobject]$ht_ethernetinterface
                 $list_ethernetinterface += $object.PSObject.ToString()
             }
+            $ht_system_info["EtherNetInterfaces"] = $list_ethernetinterface
            
             # Output result
-            $system['EtherNetInterfaces'] = $list_ethernetinterface
-            $system  | ConvertTo-Json -Depth 10
+            ConvertOutputHashTableToObject $ht_system_info | ConvertTo-Json -Depth 6
         }
     }
     catch
