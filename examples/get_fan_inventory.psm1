@@ -1,4 +1,4 @@
-﻿###
+###
 #
 # Lenovo Redfish examples - Get fan inventory
 #
@@ -96,34 +96,68 @@ function get_fan_inventory
         {
             $response = Invoke-WebRequest -Uri $chassis_url_string -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
-            $ht_links = @{}
-            $converted_object.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
 
+            if ($converted_object.psobject.Properties.name -match "ThermalSubsystem"){
+                #Get thermalsubsystem_url resource
+                $thermalsubsystem_url = "https://$ip" + $converted_object.ThermalSubsystem."@odata.id"
+                $response = Invoke-WebRequest -Uri $thermalsubsystem_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $thermalsubsystem_converted_object = $response.Content | ConvertFrom-Json
+
+                $fan_url = "https://$ip" + $thermalsubsystem_converted_object.Fans."@odata.id"
+                $response = Invoke-WebRequest -Uri $fan_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $fan_converted_object = $response.Content | ConvertFrom-Json
+                
+                #get Fans info
+                $fans_count = $fan_converted_object."Members@odata.count"
+                for($num =0;$num -lt $fans_count;$num++)
+                {
+                    $fans_x_url = "https://$ip" + $fan_converted_object.Members[$num]."@odata.id"
+                    $fans__x_response = Invoke-WebRequest -Uri $fans_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $fans_x_converted_object = $fans__x_response.Content | ConvertFrom-Json
+
+                    $speedpercent_url = "https://$ip" + $fans_x_converted_object.SpeedPercent.DataSourceUri
+                    $response = Invoke-WebRequest -Uri $speedpercent_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                    $speedpercent_converted_object = $response.Content | ConvertFrom-Json
+
+                    $hash_table = @{}
+                    $speedpercent_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    $ht_fans_info = @{}
+                    foreach($key in $hash_table.Keys)
+                    {
+                        if($key -notin "Description", "@odata.context", "@odata.id", "@odata.type","@odata.etag", "Links", "Actions", "RelatedItem")
+                        {
+                            $ht_fans_info[$key] = $hash_table[$key]
+                        }
+                    }
+                    # Output result
+                    $ht_fans_info | ConvertTo-Json
+                }
+            }
             #Get thermal_url resource
             $thermal_url = "https://$ip" + $converted_object.Thermal."@odata.id"
             $response = Invoke-WebRequest -Uri $thermal_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
-            
+                
             #get Fans info
             $list_fans_info = $converted_object.Fans
             foreach($fans_info in $list_fans_info)
             {
                 $hash_table = @{}
                 $fans_info.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
-                $ht_fans_info = @{}
+                $thermal_fans_info = @{}
                 foreach($key in $hash_table.Keys)
                 {
-                    if($key -eq "RelatedItem" -or $key -eq "@odata.type" -or $key -eq "@odata.id" -or $key -eq "Oem")
+                    if($key -notin "Description", "@odata.context", "@odata.id", "@odata.type","@odata.etag", "Links", "Actions", "RelatedItem")
                     {
-                        continue
+                        $thermal_fans_info[$key] = $hash_table[$key]
                     }
-                    $ht_fans_info[$key] = $hash_table[$key]
+                        
                 }
                 # Output result
-                $ht_fans_info | ConvertTo-Json -Depth 10
+                $thermal_fans_info | ConvertTo-Json
             }
-        }
-        
+            
+        }        
     }
     catch
     {
