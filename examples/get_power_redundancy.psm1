@@ -146,7 +146,7 @@ function get_power_redundancy
                 $ht_redundancy_info["MaxNumSupported"] = $redundancy_info.MaxNumSupported
                 $ht_redundancy_info["Mode"] = $redundancy_info.Mode
                 # Output result
-                $ht_redundancy_info | ConvertTo-Json
+                $ht_redundancy_info | ConvertTo-Json -Depth 10
             }
         }
     }
