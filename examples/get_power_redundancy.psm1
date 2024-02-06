@@ -100,6 +100,33 @@ function get_power_redundancy
             $ht_links = @{}
             $converted_object.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
 
+            if ($converted_object.psobject.Properties.name -match "PowerSubsystem"){
+                #Get powersubsystem_url resource
+                $powersubsystem_url = "https://$ip" + $converted_object.PowerSubsystem."@odata.id"
+                $response = Invoke-WebRequest -Uri $powersubsystem_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $powersubsystem_converted_object = $response.Content | ConvertFrom-Json
+
+                #Get power redundant info
+                $list_powersupplyredundancy_info = $powersubsystem_converted_object.PowerSupplyRedundancy
+                foreach($powersupplyredundancy_info in $list_powersupplyredundancy_info)
+                {
+                    $hash_table = @{}
+                    $powersupplyredundancy_info.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                    $ht_powersupplyredundancy_info = @{}
+                    foreach($key in $hash_table.Keys)
+                    {
+                        if($key -notin "Description", "@odata.context", "@odata.id", "@odata.type","@odata.etag", "Links", "Actions", "RelatedItem","RedundancyGroup","RedundancySet","Status","Oem")
+                        {
+                            $ht_powersupplyredundancy_info[$key] = $hash_table[$key]
+                        }
+                            
+                    }
+                    # Output result
+                    $ht_powersupplyredundancy_info | ConvertTo-Json -Depth 5
+                }
+            }
+            
+
             #Get powerl_url resource
             $thermal_url = "https://$ip" + $converted_object.Power."@odata.id"
             $response = Invoke-WebRequest -Uri $thermal_url -Headers $JsonHeader -Method Get -UseBasicParsing

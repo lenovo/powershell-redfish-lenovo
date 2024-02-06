@@ -181,15 +181,15 @@ function get_storage_inventory
                     foreach($volume in $hash_table.Volumes)
                     {
                         $volume_inventory = @{}
-                        $volume_url = "https://$ip" + $volume.'@odata.id'
-                        $response = Invoke-WebRequest -Uri $volume_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                        $volumes_url = "https://$ip" + $volume.'@odata.id'
+                        $response = Invoke-WebRequest -Uri $volumes_url -Headers $JsonHeader -Method Get -UseBasicParsing
                         $converted_object = $response.Content | ConvertFrom-Json
                         $hash_table3 = @{}
                         $converted_object.psobject.properties | Foreach { $hash_table3[$_.Name] = $_.Value }
                         foreach($volume_url in $converted_object.Members)
                         {
-                            $storage_x_url = "https://$ip" + $storage_url.'@odata.id'
-                            $response = Invoke-WebRequest -Uri $storage_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                            $volume_x_url = "https://$ip" + $volume_url.'@odata.id'
+                            $response = Invoke-WebRequest -Uri $volume_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
                             $converted_object = $response.Content | ConvertFrom-Json
                             $hash_table4 = @{}
                             $converted_object.psobject.properties | Foreach { $hash_table4[$_.Name] = $_.Value }
@@ -200,6 +200,14 @@ function get_storage_inventory
                                 {
                                     $volume_inventory[$key] = $hash_table4.$key
                                 }
+                                if($key -contains "Links"){
+                                    $drivesIds = @()
+                                    foreach($drive in $converted_object.Links.Drives){
+                                        $drivename = $drive."@odata.id" -split '/'
+                                        $drivesIds += $drivename[8]
+                                    }  
+                                    $volume_inventory["LinkedDriveIds"] = $drivesIds
+                                }
                             }
                             $volume_list += $volume_inventory
                         }
@@ -209,7 +217,7 @@ function get_storage_inventory
 
                 $storage_info["StorageControllers"] = $storage_list
                 # Output result
-                ConvertOutputHashTableToObject $storage_info | ConvertTo-Json
+                ConvertOutputHashTableToObject $storage_info | ConvertTo-Json -Depth 5
             }
         }
     }

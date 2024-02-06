@@ -127,10 +127,15 @@ function get_fw_inventory
             }
             if($hash_table.Keys -contains "Status")
             {
-                $fw["State"] = $hash_table.Status.State
+                $fw["State"] = $hash_table.Status
             }
+
+
+            $firmware = @{}
+            $fw_name = $firmware_x_url -split "/"
+            $firmware[$fw_name[7]] = $fw
             # Output result
-            ConvertOutputHashTableToObject $fw | ConvertTo-Json
+            ConvertOutputHashTableToObject $firmware | ConvertTo-Json -Depth 5
         }
     }
     catch

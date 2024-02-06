@@ -126,6 +126,9 @@ function lenovo_get_bmc_user_accounts
                 $bmc_user['UserName'] = $converted_object.UserName
                 $bmc_user['Enabled'] = $converted_object.Enabled
                 $bmc_user['Locked'] = $converted_object.Locked
+                $bmc_user['AccountTypes'] = $converted_object.AccountTypes
+                $bmc_user['SNMP'] = $converted_object.SNMP
+                $bmc_user['RoleId'] = $converted_object.RoleId
                 if($hash_table.Keys -contains "Links")
                 {
                     $accounts_role_url ="https://$ip" + $hash_table.Links.'Role'.'@odata.id'
@@ -135,7 +138,7 @@ function lenovo_get_bmc_user_accounts
                     $bmc_user['OemPrivileges'] = $converted_object.OemPrivileges
                 }
                 # Output result
-                ConvertOutputHashTableToObject $bmc_user      
+                ConvertOutputHashTableToObject $bmc_user | ConvertTo-Json -Depth 5   
             }
         }
     }
@@ -173,4 +176,3 @@ function lenovo_get_bmc_user_accounts
         }
     }
 }
-    

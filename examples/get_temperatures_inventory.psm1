@@ -101,27 +101,33 @@ function get_temperatures_inventory
             $converted_object.psobject.properties | Foreach { $ht_links[$_.Name] = $_.Value }
 
             #Get thermal_url resource
-            $thermal_url = "https://$ip" + $converted_object.Thermal."@odata.id"
-            $response = Invoke-WebRequest -Uri $thermal_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $thermalsubsystem_url = "https://$ip" + $converted_object.ThermalSubsystem."@odata.id"
+            $response = Invoke-WebRequest -Uri $thermalsubsystem_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
 
             #get temperatures info
-            $list_temperatures_info = $converted_object.Temperatures
-            foreach($temperatures_info in $list_temperatures_info)
+            $thermalmetrics_url = "https://$ip" + $converted_object.ThermalMetrics."@odata.id"
+            $thermalmetrics_response = Invoke-WebRequest -Uri $thermalmetrics_url -Headers $JsonHeader -Method Get -UseBasicParsing
+            $thermalmetrics_converted_object = $thermalmetrics_response.Content | ConvertFrom-Json
+
+            foreach($temperaturereadingscelsius_url in $thermalmetrics_converted_object.TemperatureReadingsCelsius)
             {
+                $temperaturereadingscelsius_x_url = "https://$ip" + $temperaturereadingscelsius_url.DataSourceUri
+                $temperaturereadingscelsius_x_response = Invoke-WebRequest -Uri $temperaturereadingscelsius_x_url -Headers $JsonHeader -Method Get -UseBasicParsing
+                $temperaturereadingscelsius_x_converted_object = $temperaturereadingscelsius_x_response.Content | ConvertFrom-Json
                 $hash_table = @{}
-                $temperatures_info.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
+                $temperaturereadingscelsius_x_converted_object.psobject.properties | Foreach { $hash_table[$_.Name] = $_.Value }
                 $ht_temperatures_info = @{}
                 foreach($key in $hash_table.Keys)
                 {
-                    if($key -eq "RelatedItem" -or $key -eq "@odata.type" -or $key -eq "@odata.id")
+                    if($key -in "Description", "@odata.context", "@odata.id", "@odata.type","@odata.etag", "Links", "Actions", "RelatedItem")
                     {
                         continue
                     }
                     $ht_temperatures_info[$key] = $hash_table[$key]
                 }
                 # Output result
-                $ht_temperatures_info | ConvertTo-Json -Depth 10
+                $ht_temperatures_info | ConvertTo-Json -Depth 5
             }
         }
     }
