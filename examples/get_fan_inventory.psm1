@@ -137,7 +137,7 @@ function get_fan_inventory
             $thermal_url = "https://$ip" + $converted_object.Thermal."@odata.id"
             $response = Invoke-WebRequest -Uri $thermal_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $converted_object = $response.Content | ConvertFrom-Json
-                
+            
             #get Fans info
             $list_fans_info = $converted_object.Fans
             foreach($fans_info in $list_fans_info)
@@ -155,7 +155,6 @@ function get_fan_inventory
                 # Output result
                 $thermal_fans_info | ConvertTo-Json -Depth 10
             }
-            
         }        
     }
     catch
