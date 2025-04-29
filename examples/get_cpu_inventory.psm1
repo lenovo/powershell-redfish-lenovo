@@ -54,7 +54,6 @@ function get_cpu_inventory
         [string]$config_file="config.ini"
         )
         
-
     # Get configuration info from config file
     $ht_config_ini_info = read_config -config_file $config_file
     
@@ -80,16 +79,16 @@ function get_cpu_inventory
     {
         $session_key = ""
         $session_location = ""
-
         # Create session
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
-
-        # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
-        }
         
+        # Build headers with sesison key for authentication
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
         # Get the system url collection
         $system_url_collection = @()
         $system_url_collection = get_system_urls -bmcip $ip -session $session -system_id $system_id

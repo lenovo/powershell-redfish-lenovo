@@ -98,7 +98,9 @@ function set_bios_attribute
         $session_location = $session.Location
 
         #build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
         }
         
         # get the system url collection

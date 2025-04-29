@@ -100,7 +100,9 @@ function set_server_asset_tag
             $url_address_system = "https://$ip"+$system_url_string
 
             # Build headers with sesison key for authentication
-            $JsonHeader = @{ "X-Auth-Token" = $session_key
+            $JsonHeader = @{ 
+                "X-Auth-Token" = $session_key
+                "Accept" = "application/json"
             }
 
             # get etag to set If-Match precondition
@@ -110,12 +112,14 @@ function set_server_asset_tag
             {
                 $JsonHeader = @{ "If-Match" = $converted_object."@odata.etag"
                             "X-Auth-Token" = $session_key
+                            "Accept" = "application/json"
                 }
             }
             else
             {
                 $JsonHeader = @{ "If-Match" = ""
                             "X-Auth-Token" = $session_key
+                            "Accept" = "application/json"
                 }
             }
 

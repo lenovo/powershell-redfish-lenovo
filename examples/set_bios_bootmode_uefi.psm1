@@ -88,7 +88,10 @@ function set_bios_bootmode_uefi
         $session_location = $session.Location
 
         # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
 
         # Get the system url collection
         $system_url_collection = @()

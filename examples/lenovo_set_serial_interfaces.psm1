@@ -102,7 +102,10 @@ function lenovo_set_serial_interfaces
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
 
-        $JsonHeader = @{"X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
     
         # Get the manager url collection
         $base_url = "https://$ip/redfish/v1/"

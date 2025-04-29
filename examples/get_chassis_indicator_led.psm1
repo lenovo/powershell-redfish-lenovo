@@ -80,7 +80,10 @@ function get_chassis_indicator_led
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
         
         $chassis_url_list = get_chassis_urls $ip $session
         foreach($response_led_url in $chassis_url_list)

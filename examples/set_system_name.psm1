@@ -78,7 +78,10 @@ function set_system_name
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key }
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
 
         # Get ServiceBase resource
         $base_url = "https://$ip/redfish/v1/"
@@ -95,7 +98,10 @@ function set_system_name
         foreach ($request in $response_chassis_url.Members)
         {
             $response_managers_url = "https://$ip" + $request.'@odata.id'
-            $JsonHeader = @{"X-Auth-Token" = $session_key}
+            $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
             $response_url = Invoke-WebRequest -Uri $response_managers_url -Headers $JsonHeader -Method Get -UseBasicParsing
             $links_info = $response_url.Content | ConvertFrom-Json
             $ht_links = @{}

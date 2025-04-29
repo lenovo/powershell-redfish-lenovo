@@ -79,7 +79,10 @@ function get_sessions
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key }
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
 
         # Get session service url
         $base_url = "https://$ip/redfish/v1/"

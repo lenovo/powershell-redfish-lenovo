@@ -81,7 +81,10 @@ function get_hostinterface
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
 
-        $JsonHeader = @{"X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
     
         # Get ServiceRoot resource
         $base_url = "https://$ip/redfish/v1/"
