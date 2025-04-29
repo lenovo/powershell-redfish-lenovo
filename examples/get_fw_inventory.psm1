@@ -79,7 +79,10 @@ function get_fw_inventory
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
 
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
     
         # Get the update server url via Invoke-WebRequest
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing

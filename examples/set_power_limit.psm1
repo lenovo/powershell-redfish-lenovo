@@ -94,7 +94,9 @@ function set_power_limit
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
         }
         
         # Get the chassis url

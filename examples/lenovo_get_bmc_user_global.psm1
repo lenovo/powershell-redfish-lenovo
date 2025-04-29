@@ -84,7 +84,10 @@ function lenovo_get_bmc_user_global
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
-        $JsonHeader = @{"X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
 
         # Get the account server url via Invoke-WebRequest
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing

@@ -89,7 +89,10 @@ function lenovo_create_bmc_user
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
       
         # Get the base url collection
         $manager_url_collection = @()
@@ -293,7 +296,9 @@ function set_custom_role_privileges
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
         }
 
         $list_auth = @("Supervisor","ReadOnly","UserAccountManagement","RemoteConsoleAccess","RemoteConsoleAndVirtualMediaAcccess","RemoteServerPowerRestartAccess","AbilityClearEventLogs","AdapterConfiguration_Basic"

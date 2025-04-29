@@ -90,7 +90,9 @@ function get_schema
         $session_location = $session.Location
 
         # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
         }
 
         # Get base resource

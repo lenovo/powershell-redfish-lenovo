@@ -86,7 +86,9 @@ function lenovo_get_bios_boot_order
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
         }
         
         # Get the system url collection

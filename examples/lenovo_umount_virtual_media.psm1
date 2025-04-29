@@ -86,7 +86,10 @@ function lenovo_umount_virtual_media
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
 
-        $JsonHeader = @{"X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
     
         # Get the system url collection
         $system_url_collection = @()

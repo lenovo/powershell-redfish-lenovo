@@ -80,7 +80,10 @@ function lenovo_bmc_license_delete
         $session = create_session -ip $ip -username $username -password $password
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
-        $JsonHeader = @{"X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
         # Get the base url collection
         $base_url = "https://$ip/redfish/v1/"
         $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing 

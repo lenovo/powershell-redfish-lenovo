@@ -147,38 +147,53 @@ function create_session
     $bmc_password = $password
     $bmc_password_secure = ConvertTo-SecureString $bmc_password -AsPlainText -Force
     $bmc_credential = New-Object System.Management.Automation.PSCredential($bmc_username, $bmc_password_secure)
-
     if ($ver -gt 5) 
     {
         Get-Alias -Name Invoke-WebRequest 2>&1 > $null
         if (-not $?)
         {
             new-Alias -Name 'Invoke-WebRequest' -Value 'lenovo_invoke_webrequest' -Scope Global
+            write-host "Alias Invoke-WebRequest is created."
         }
     }
 
-    $base_url = "https://$ip/redfish/v1/"
+    # 将用户名和密码编码为 Base64
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${username}:${password}"))
+    
+    # 添加 Authorization 头
+    $headers = @{
+        "Authorization" = "Basic $auth"
+        "Accept" = "application/json"  # 根据服务器响应格式调整（如 text/xml）
+    }
 
+    $base_url = "https://$ip/redfish/v1/"
+    $response = Invoke-WebRequest -Uri $base_url -Method Get -Headers $headers -UseBasicParsing
     # Get SessionService url
-    $response = Invoke-WebRequest -Uri $base_url -Method Get -Credential $bmc_credential -UseBasicParsing
+    # $response = Invoke-WebRequest -Uri $base_url -Method Get -Credential $bmc_credential -UseBasicParsing
+    # write-host "response: $response"
     $converted_object = $response.Content | ConvertFrom-Json
     $hash_table = @{}
     $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
     $session_server_url_string = "https://$ip"+$hash_table.SessionService.'@odata.id'
 
     # Get session creation url from SessionService
-    $response = Invoke-WebRequest -Uri $session_server_url_string -Method Get -Credential $bmc_credential -UseBasicParsing
+    $response = Invoke-WebRequest -Uri $session_server_url_string -Method Get -Headers $headers -UseBasicParsing
+    # $response = Invoke-WebRequest -Uri $session_server_url_string -Method Get -Credential $bmc_credential -UseBasicParsing
     $converted_object = $response.Content | ConvertFrom-Json
     $hash_table = @{}
     $converted_object.psobject.properties | ForEach-Object { $hash_table[$_.Name] = $_.Value }
     $session_url_string = "https://$ip"+$hash_table.Sessions.'@odata.id'
+
+    $headers_post = @{
+        "Accept" = "application/json"
+    }
 
     $JsonBody = @{  "Password" = $password
                     "UserName" = $username
                 } | ConvertTo-Json -Compress
 
     # Create session and acquire session info
-    $response = Invoke-WebRequest -UseBasicParsing -Uri $session_url_string -Method Post -Body $JsonBody -ContentType 'application/json'
+    $response = Invoke-WebRequest -UseBasicParsing -Uri $session_url_string -Method Post -Body $JsonBody -ContentType 'application/json' -Headers $headers_post
     $session = @{"X-Auth-Token" = [string]$response.headers.'X-Auth-Token'; "Location" = [string]$response.headers.Location} 
 
     return $session
@@ -205,7 +220,10 @@ function delete_session
 
     $session_key = $session.'X-Auth-Token'
     $session_location = $session.Location
-    $JsonHeader = @{"X-Auth-Token" = $session_key}
+            $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
 
     # Complete the url if it's not start with proper format
     if($session_location.startswith('http') -eq $False)
@@ -255,7 +273,10 @@ function get_system_urls
     # Get the system url collection via Invoke-WebRequest
     $base_url = "https://$bmcip/redfish/v1/"
     $session_key = $session.'X-Auth-Token'
-    $JsonHeader = @{"X-Auth-Token" = $session_key}
+    $JsonHeader = @{ 
+        "X-Auth-Token" = $session_key
+        "Accept" = "application/json"
+    }
 
     $response = Invoke-WebRequest -Uri $base_url -Headers $JsonHeader -Method Get -UseBasicParsing
     $converted_object = $response.Content | ConvertFrom-Json

@@ -84,7 +84,10 @@ function get_server_boot_once_types
         $session_location = $session.Location
 
         # Build headers with session key for authentication
-        $JsonHeader = @{ 'X-Auth-Token' = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
 
         # Get the system url collection
         $system_url_collection = @(get_system_urls -bmcip $ip -session $session -system_id $system_id)

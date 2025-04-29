@@ -83,7 +83,10 @@ function set_bmc_hostname
         $session_location = $session.Location
 
         # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key }
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
     
         # Get the manager url collection
         $manager_url_collection = @()
@@ -188,7 +191,10 @@ function set_bmc_hostname
                                 $session_key = $session.'X-Auth-Token'
 
                                 # Build headers with sesison key for authentication
-                                $JsonHeader = @{ "X-Auth-Token" = $session_key }
+                        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
                                 break
                             }
                             Start-Sleep -m 1000

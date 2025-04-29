@@ -90,7 +90,10 @@ function del_event_subscriptions
         $session_location = $session.Location
 
         # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
     
         # Get the base url collection
         $manager_url_collection = @()
@@ -145,7 +148,10 @@ function del_event_subscriptions
 
         
         # Build headers with sesison key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key}
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
         #Del event subscriptions
         if($list_del_url.Length -gt 0)
         {

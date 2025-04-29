@@ -283,7 +283,10 @@ function lenovo_set_snmp_global
         $session_key = $session.'X-Auth-Token'
         $session_location = $session.Location
         # Build headers with session key for authentication
-        $JsonHeader = @{ "X-Auth-Token" = $session_key }
+        $JsonHeader = @{ 
+            "X-Auth-Token" = $session_key
+            "Accept" = "application/json"
+        }
 
         # Get SNMP
         $request_url = "https://$ip/redfish/v1/Managers/1/NetworkProtocol/Oem/Lenovo/SNMP"
